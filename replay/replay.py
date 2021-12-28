@@ -10,30 +10,22 @@ from pathlib import Path
 import zipfile
 import gzip
 import phpserialize
+import json
 
-from io import StringIO
-from collections import OrderedDict
+import pprint
 
 # Replay files are .zip files, each of which are gzip compressed
 # Filenames are a{game_id} and {game_id}
+# a{game_id} file contains all the actions - csv style objects with JSON serialized contents for each turn
+# {game_id} file contains all the remaining metadata, including initial buildings and units
 
-class TurnObj(typing.NamedTuple):
-    """
-    Used in the awbw codebase to query the gamestate of a given turn
-    """
-    gameId: int # int value, must correspond to a real game in the awbw server
-    turn: int # int value, the turn number it is. Not the day value - there are two turns per day (p1 and p2). 0 indexed
-    turnPId: int # int value, indicates which is the active player. Game state "players" array makes lookup from turnPId to real awbw users_id
-    turnDay: int # int value, the maximum number of days in the replay ???
-    initial: bool # bool value, indicates it's the first turn of the game or not
-
-class TurnAction(typing.NamedTuple):
+class RawTurn(typing.NamedTuple):
     """
     Contains all actions in a turn. The actual turn number is given by the placement in the action list.
     """
     playerId: int
     day: int
-    action: dict # TODO: Unpack this fully, including the JSON inside
+    actions: typing.List[typing.Dict] # TODO: Unpack this fully, including the JSON inside
 
 def sanitize_phpobject(phpobj):
     """
@@ -64,11 +56,11 @@ def sanitize_phpobject(phpobj):
 
     return phpobj, set(found_types)
 
-class Replay():
+class ReplayFile():
     """
     Usage:
 
-    with Replay("52963.zip") as replay:
+    with ReplayFile("52963.zip") as replay:
         ...
     """
 
@@ -85,7 +77,7 @@ class Replay():
         self.namelist = []
         self.filedata = []
 
-        self._actions = None
+        self._turns = None
         self._game = None
 
     def __enter__(self):
@@ -96,12 +88,10 @@ class Replay():
             self.filedata.append(gzip.decompress(self.file.read(name)))
             if "a" in name:
                 # actions is a csv (sep = ;) of playerId, day, and php array of the actions made
-                self._actions = self._parse_actions(self.filedata[-1])
+                self._turns = self._parse_actions(self.filedata[-1])
             else:
                 self._game_data = self._parse_game(self.filedata[-1])
-                self._game = self._game_data._asdict()
-
-        #self._setup_properties()
+                self._game, _ = sanitize_phpobject(self._game_data)
 
         return self
 
@@ -121,36 +111,82 @@ class Replay():
         for line in data.decode().strip().split("\n"):
             parsed = parse.parse(self._ACTION_PARSE_STR, line).named
             phpobj = phpserialize.loads(bytes(parsed["phpobj"], encoding="utf-8"), decode_strings=True)
-            result.append(TurnAction(playerId=parsed["playerId"], day=parsed["day"], action=phpobj))
+            phpactions = phpobj[2]
+            actions = []
+            for key in range(len(phpactions)):
+                jsonstr = phpactions[key]
+                actions.append(json.loads(jsonstr))
+            result.append(RawTurn(playerId=parsed["playerId"], day=parsed["day"], actions=actions))
 
         return result
-
-    def _setup_properties(self):
-        """
-        Inherit all the attributes from self._game as top level attributes
-        """
-        def generic_getter(data, name):
-            """
-            Returns a callable that returns data[name]
-            """
-            def _getter():
-                return data[name]
-            return _getter
-
-        for key in self._game.keys():
-            setattr(self, key, generic_getter(self._game, key))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
-    # TODO: Remove debug tools
-    def print(self):
-        print(self._game)
+class Replay():
+    """
+    Class to play back a replay from a ReplayFile
+    """
+
+    def __init__(self, replayfile):
+        self._r = replayfile
+        self._current_turn = 0
+        self._current_action = 0
+        self._max_turns = len(self._r._turns)
+
+    def turns(self):
+        """
+        Iterate over every turn in the game.
+        """
+        return self._r._turns
+
+    def actions(self):
+        """
+        Iterate over every action in the game.
+        """
+        for t in self.turns():
+            yield from t.actions
+
+    def set_turn(self, turn):
+        if turn < self._max_turns:
+            self._current_turn = turn
+
+    def next_action(self):
+        """
+        Return the next action made in the replay
+
+        Returns None if on an invalid turn / action
+        """
+        if self.turn_over():
+            return None
+
+        turn = self._r._turns[self._current_turn]
+        if self._current_action >= len(turn.actions):
+            return None
+
+        action = turn.actions[self._current_action]
+        self._current_action += 1
+
+        return action
+
+    def next_turn(self):
+        self._current_turn += 1
+        self._current_action = 0
+
+    def turn_over(self):
+        return self.replay_over() or self._current_action >= len(self._r._turns[self._current_turn].actions)
+
+    def replay_over(self):
+        return self._current_turn >= self._max_turns
 
 if __name__ == "__main__":
-    with Replay(sys.argv[1]) as replay:
-        replay.print()
+    with ReplayFile(sys.argv[1]) as replayfile:
+        r = Replay(replayfile)
 
-        data, types = sanitize_phpobject(replay._game_data)
-        print(types)
-        print(data)
+        print("Press enter to step through the replay")
+        action_types = []
+        for action in r.actions():
+            pprint.pp(action)
+            action_types.append(action["action"])
+
+        print(f"The action types were {set(action_types)}")

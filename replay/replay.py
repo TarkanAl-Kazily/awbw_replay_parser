@@ -2,8 +2,7 @@
 #
 # Module for opening an awbw replay file
 
-import pdb
-
+import sys
 import parse
 import typing
 import logging
@@ -34,7 +33,7 @@ class TurnAction(typing.NamedTuple):
     """
     playerId: int
     day: int
-    action: OrderedDict
+    action: dict # TODO: Unpack this fully, including the JSON inside
 
 class Replay():
     """
@@ -57,21 +56,22 @@ class Replay():
         self.namelist = []
         self.filedata = []
 
-        self.actions = None
-        self.game = None
+        self._actions = None
+        self._game = None
 
     def __enter__(self):
         logging.debug(f"Opening {self._path}")
         self.file = zipfile.ZipFile(self._path)
         self.namelist = self.file.namelist()
-        pdb.set_trace()
         for name in self.namelist:
             self.filedata.append(gzip.decompress(self.file.read(name)))
             if "a" in name:
                 # actions is a csv (sep = ;) of playerId, day, and php array of the actions made
-                self.actions = self._parse_actions(self.filedata[-1])
+                self._actions = self._parse_actions(self.filedata[-1])
             else:
-                self.game = self._parse_game(self.filedata[-1])
+                self._game = self._parse_game(self.filedata[-1])
+
+        self._setup_properties()
 
         return self
 
@@ -80,7 +80,7 @@ class Replay():
         Arguments:
         - data: The decompressed contents of the (non-prefixed) {game_id} gzip file
         """
-        return phpserialize.loads(self.filedata[-1], object_hook=phpserialize.phpobject)
+        return phpserialize.loads(self.filedata[-1], object_hook=phpserialize.phpobject)._asdict()
 
     def _parse_actions(self, data):
         """
@@ -95,24 +95,34 @@ class Replay():
 
         return result
 
+    def _setup_properties(self):
+        """
+        Inherit all the attributes from self._game as top level attributes
+        """
+        def generic_getter(data, name):
+            """
+            Returns a callable that returns data[name]
+            """
+            def _getter():
+                return data[name]
+            return _getter
+
+        for key in self._game.keys():
+            #print(key)
+            setattr(self, key.decode(), generic_getter(self._game, key))
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
+    # TODO: Remove debug tools
     def print(self):
-        print()
-
-        print(self.actions)
-        print(self.game)
-
-    def id(self):
-        pass
-
-    def map(self):
-        pass
-
-    def players(self):
-        pass
+        print(self._actions)
+        print(self._game)
+        print(self._game)
 
 if __name__ == "__main__":
-    with Replay("ignore/526302.zip") as replay:
+    with Replay(sys.argv[1]) as replay:
         replay.print()
+        print(replay.__dir__())
+        print(replay.id())
+        print(replay.players()[0]._asdict())

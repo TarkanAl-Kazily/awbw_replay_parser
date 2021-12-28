@@ -12,8 +12,6 @@ import gzip
 import phpserialize
 import json
 
-import pprint
-
 # Replay files are .zip files, each of which are gzip compressed
 # Filenames are a{game_id} and {game_id}
 # a{game_id} file contains all the actions - csv style objects with JSON serialized contents for each turn
@@ -147,46 +145,23 @@ class Replay():
         for t in self.turns():
             yield from t.actions
 
-    def set_turn(self, turn):
-        if turn < self._max_turns:
-            self._current_turn = turn
-
-    def next_action(self):
+    def action_summaries(self):
         """
-        Return the next action made in the replay
-
-        Returns None if on an invalid turn / action
+        Return just the action type.
         """
-        if self.turn_over():
-            return None
-
-        turn = self._r._turns[self._current_turn]
-        if self._current_action >= len(turn.actions):
-            return None
-
-        action = turn.actions[self._current_action]
-        self._current_action += 1
-
-        return action
-
-    def next_turn(self):
-        self._current_turn += 1
-        self._current_action = 0
-
-    def turn_over(self):
-        return self.replay_over() or self._current_action >= len(self._r._turns[self._current_turn].actions)
-
-    def replay_over(self):
-        return self._current_turn >= self._max_turns
+        for action in self.actions():
+            yield action["action"]
 
 if __name__ == "__main__":
+    import pprint
     with ReplayFile(sys.argv[1]) as replayfile:
         r = Replay(replayfile)
 
         print("Press enter to step through the replay")
-        action_types = []
         for action in r.actions():
             pprint.pp(action)
-            action_types.append(action["action"])
 
+        action_types = r.action_summaries()
         print(f"The action types were {set(action_types)}")
+
+        print(" ".join(r.action_summaries()))

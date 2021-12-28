@@ -35,6 +35,35 @@ class TurnAction(typing.NamedTuple):
     day: int
     action: dict # TODO: Unpack this fully, including the JSON inside
 
+def sanitize_phpobject(phpobj):
+    """
+    Recursively convert phpobj to a dict
+
+    Also returns a list of all the phpobject class types found
+    """
+
+    found_types = []
+
+    if isinstance(phpobj, phpserialize.phpobject):
+        found_types.append(phpobj.__name__)
+        phpobj, types = sanitize_phpobject(phpobj._asdict())
+        found_types += types
+
+    elif isinstance(phpobj, dict):
+        for key, value in phpobj.items():
+            phpobj[key], types = sanitize_phpobject(value)
+            found_types += types
+
+    elif isinstance(phpobj, list):
+        for i, value in enumerate(phpobj):
+            phpobj[i], types = sanitize_phpobject(value)
+            found_types += types
+
+    else: # primitive type
+        pass
+
+    return phpobj, set(found_types)
+
 class Replay():
     """
     Usage:
@@ -69,9 +98,10 @@ class Replay():
                 # actions is a csv (sep = ;) of playerId, day, and php array of the actions made
                 self._actions = self._parse_actions(self.filedata[-1])
             else:
-                self._game = self._parse_game(self.filedata[-1])
+                self._game_data = self._parse_game(self.filedata[-1])
+                self._game = self._game_data._asdict()
 
-        self._setup_properties()
+        #self._setup_properties()
 
         return self
 
@@ -80,7 +110,7 @@ class Replay():
         Arguments:
         - data: The decompressed contents of the (non-prefixed) {game_id} gzip file
         """
-        return phpserialize.loads(self.filedata[-1], object_hook=phpserialize.phpobject)._asdict()
+        return phpserialize.loads(data, object_hook=phpserialize.phpobject, decode_strings=True)
 
     def _parse_actions(self, data):
         """
@@ -90,7 +120,7 @@ class Replay():
         result = []
         for line in data.decode().strip().split("\n"):
             parsed = parse.parse(self._ACTION_PARSE_STR, line).named
-            phpobj = phpserialize.loads(bytes(parsed["phpobj"], encoding="utf-8"))
+            phpobj = phpserialize.loads(bytes(parsed["phpobj"], encoding="utf-8"), decode_strings=True)
             result.append(TurnAction(playerId=parsed["playerId"], day=parsed["day"], action=phpobj))
 
         return result
@@ -108,21 +138,19 @@ class Replay():
             return _getter
 
         for key in self._game.keys():
-            #print(key)
-            setattr(self, key.decode(), generic_getter(self._game, key))
+            setattr(self, key, generic_getter(self._game, key))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
     # TODO: Remove debug tools
     def print(self):
-        print(self._actions)
-        print(self._game)
         print(self._game)
 
 if __name__ == "__main__":
     with Replay(sys.argv[1]) as replay:
         replay.print()
-        print(replay.__dir__())
-        print(replay.id())
-        print(replay.players()[0]._asdict())
+
+        data, types = sanitize_phpobject(replay._game_data)
+        print(types)
+        print(data)

@@ -21,39 +21,36 @@ def get_args(argv=None):
 
 def main(args):
     with AWBWReplay(args.file) as replay:
-        state = AWBWGameState(replay_initial=replay.game_info())
+        states = [AWBWGameState(replay_initial=replay.game_info())]
 
         players = {}
-        for i, p_id in enumerate(state.players.keys()):
-            players[p_id] = {"name": PLAYER_NAMES[i], "funds": [state.players[p_id]["funds"]]}
+        for i, p_id in enumerate(states[-1].players.keys()):
+            players[p_id] = {"name": PLAYER_NAMES[i], "funds": []}
 
-        action_number = 0
-        # Keep track of what actions turns changed on, to draw vertical lines with
-        turns = []
+        # Generate all the states
         for action in replay.actions():
             action = AWBWGameAction(replay_action=action)
-            state = state.apply_action(action)
-            if state.game_info["turn"] == len(turns):
-                turns.append(action_number)
-            for p_id, player in state.players.items():
-                players[p_id]["funds"].append(player["funds"])
+            states.append(states[-1].apply_action(action))
 
-            action_number += 1
+        # For each state, get the day. If it's the last state of the day, track both player's stats
+        day = 1
+        for i, state in enumerate(states):
+            if i + 1 >= len(states) or states[i+1].game_info["day"] == day + 1:
+                for p_id, player in players.items():
+                    player["funds"].append(state.players[p_id]["funds"])
+                day += 1
 
-        # TODO: Instead of using turns for this data, use days
-        turns.append(action_number)
+        x_vals = np.arange(1, day)
+        x_offsets = np.linspace(-0.5, 0.5, num=len(players) + 2)
+        x_width = 1.0 / (len(players) + 1)
 
-        # Convert actions to proportionally where they fall in the turn
-        x_vals = np.array([])
-        for i, (t, next_t) in enumerate(zip(turns[:-1], turns[1:])):
-            x_vals = np.append(x_vals, np.linspace(i, i+1, num=next_t - t, endpoint=False))
+        for i, p_id in enumerate(players.keys()):
+            player = players[p_id]
+            plt.bar(x_vals + x_offsets[i + 1], player["funds"], width=x_width, label=player["name"])
 
-        # Edge case due to using Endpoint = False, we miss the very last action value
-        # which would be at the start of the next turn
-        x_vals = np.append(x_vals, [len(turns) - 1])
-
-        for p_id, player in players.items():
-            plt.plot(x_vals, player["funds"], label=player["name"])
+        plt.xlim([0, day])
+        plt.xticks(x_vals)
+        plt.legend()
 
         plt.show()
 

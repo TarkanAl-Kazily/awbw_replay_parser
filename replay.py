@@ -23,7 +23,7 @@ class RawTurn(typing.NamedTuple):
     """
     playerId: int
     day: int
-    actions: typing.List[typing.Dict] # TODO: Unpack this fully, including the JSON inside
+    actions: typing.List[typing.Dict]
 
 def sanitize_phpobject(phpobj):
     """

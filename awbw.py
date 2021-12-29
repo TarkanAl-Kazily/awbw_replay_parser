@@ -28,6 +28,7 @@ class Player(typing.TypedDict, total=False):
     co_power_on: bool = False
     eliminated: bool = False
     funds: int = 0
+    turn_count: int = 0
 
 class Unit(typing.TypedDict, total=False):
     id: int = 0
@@ -81,7 +82,6 @@ class AWBWGameAction(game.GameAction):
         self.type = self.Type[replay_action["action"]]
         self.info = replay_action
 
-
 class AWBWGameState(game.GameState):
     """
     Represents a single state in the AWBW game.
@@ -119,7 +119,9 @@ class AWBWGameState(game.GameState):
         """Helper for just the players info"""
         self.players = {}
         for key, player in replay_initial_players.items():
-            player_info = {}
+            player_info = {
+                "turn_count": 0
+            }
             player_keys_int = [
                     "id",
                     "funds",
@@ -139,6 +141,8 @@ class AWBWGameState(game.GameState):
                 player_info[k] = (player[k] == "Y")
 
             self.players[player_info["id"]] = Player(**player_info)
+        first_player = replay_initial_players[0]
+        self.players[int(first_player["id"])]["turn_count"] = 1
 
     def _construct_initial_units(self, replay_initial_units):
         """Helper for just the unit info"""
@@ -173,7 +177,7 @@ class AWBWGameState(game.GameState):
         game_info_info["maps_id"] = replay_initial["maps_id"]
         game_info_info["active_player_id"] = replay_initial["players"][0]["id"]
         game_info_info["turn"] = 0
-        game_info_info["day"] = 0
+        game_info_info["day"] = 1
         self.game_info = GameInfo(**game_info_info)
 
     def _construct_from_replay_initial(self, replay_initial):
@@ -387,7 +391,6 @@ class AWBWGameState(game.GameState):
             "active_player_id": int(info["nextPId"]),
             "turn": self.game_info["turn"] + 1,
         }
-        # TODO: Increment day
 
         # Player info
         # - funds change
@@ -399,6 +402,11 @@ class AWBWGameState(game.GameState):
                 new_player_info[p_id] = self.players[p_id] | {"funds": v}
             else:
                 new_player_info[p_id] = self.players[p_id]
+        new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
+
+        # Increment day by using the maximum turn count of all players
+        turn_counts = [p["turn_count"] for p in new_player_info.values()]
+        new_global_info["day"] = max(turn_counts)
 
         # Unit info
         # - resupply

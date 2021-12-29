@@ -1,10 +1,12 @@
-import sys
-import argparse
+"""Main CLI tool to use the AWBW Replay Parser libraries"""
 
-from replay import AWBWReplay
-from awbw import AWBWGameAction, AWBWGameState
+import argparse
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
+
+from awbw import AWBWGameAction, AWBWGameState
+from replay import AWBWReplay
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
@@ -13,6 +15,16 @@ EXIT_FAILURE = 1
 PLAYER_NAMES = ["Andy", "Bob", "Colin", "Drake", "Eagle", "Flak", "Grit", "Hawke"]
 
 def get_args(argv=None):
+    """
+    Handles argument parsing for main
+
+    Arguments:
+    - argv: List of string arguments, or None to use sys.argv (default)
+
+    Returns:
+    - namespace containing parsed arguments
+    """
+
     parser = argparse.ArgumentParser(description="AWBW Replay Parser tool")
 
     parser.add_argument("file", help="Replay file to open", type=str)
@@ -20,6 +32,7 @@ def get_args(argv=None):
     return parser.parse_args(argv)
 
 def main(args):
+    """Parses a replay to generate plots of data"""
     with AWBWReplay(args.file) as replay:
         states = [AWBWGameState(replay_initial=replay.game_info())]
 

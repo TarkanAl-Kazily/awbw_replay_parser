@@ -121,6 +121,9 @@ class AWBWReplay():
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
+    def path(self):
+        return self._path
+
     def game_info(self):
         return self._game
 

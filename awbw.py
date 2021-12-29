@@ -511,8 +511,7 @@ class AWBWGameState(game.GameState):
 
 if __name__ == "__main__":
     import sys, os, pprint
-    sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
-    from replay.replay import AWBWReplay
+    from replay import AWBWReplay
     with AWBWReplay(sys.argv[1]) as replay:
         state = AWBWGameState(replay_initial=replay.game_info())
 

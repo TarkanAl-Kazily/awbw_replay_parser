@@ -144,6 +144,7 @@ class AWBWReplay():
         for action in self.actions():
             yield action["action"]
 
+# Basic test code for opening a replay file
 if __name__ == "__main__":
     import pprint
     with AWBWReplay(sys.argv[1]) as replay:

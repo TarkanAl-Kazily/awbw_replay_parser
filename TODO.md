@@ -16,7 +16,8 @@
 
 # Up next
 
-- [ ] P0: Use matplotlib to plot numbers from game state over time (actions)
+- [X] P0: Use matplotlib to plot numbers from game state over time (actions)
+- [ ] P0: Support tracking which day it is
 - [ ] P0: Create a google collab / github interactive notebook for anyone to enter a replay ID and use Python to inspect state over time
   - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
 - [ ] P1: Continue adding support for more action types

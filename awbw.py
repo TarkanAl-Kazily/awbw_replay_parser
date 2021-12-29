@@ -1,6 +1,4 @@
-# awbw.py
-#
-# Classes specific to AWBW
+"""Classes specific to AWBW Game States and Actions"""
 
 import pdb
 import logging
@@ -10,6 +8,7 @@ import typing
 import game
 
 class GameInfo(typing.TypedDict, total=False):
+    """Stores general information about the game"""
     games_id: int = 0
     active_player_id: int = 0
     maps_id: int = 0
@@ -17,6 +16,7 @@ class GameInfo(typing.TypedDict, total=False):
     day: int = 0
 
 class Player(typing.TypedDict, total=False):
+    """Stores per player information."""
     id: int = 0
     team: int = 0
     users_id: int = 0
@@ -31,6 +31,7 @@ class Player(typing.TypedDict, total=False):
     turn_count: int = 0
 
 class Unit(typing.TypedDict, total=False):
+    """Stores per unit information."""
     id: int = 0
     players_id: int = 0
     name: str = "Unit"
@@ -57,9 +58,11 @@ class Unit(typing.TypedDict, total=False):
     carried: bool = False
 
 class Building(typing.TypedDict, total=False):
+    """Stores per building information."""
     id: int = 0
     capture: int = 20
-    # Corresponds to a terrain type, which includes the information about which country owns the building
+    # Corresponds to a terrain type, which includes the information about which
+    # country owns the building.
     # TODO: Reverse lookup the terrain ID to determine which player owns the property
     # TODO: Reverse lookup the terrain ID to determine what type of property this is
     terrain_id: int = 0
@@ -76,19 +79,20 @@ class AWBWGameAction(game.GameAction):
     """
 
     class Type(Enum):
-        Fire = "Fire"
-        Join = "Join"
-        Resign = "Resign"
-        Move = "Move"
-        Build = "Build"
-        End = "End"
-        Power = "Power"
-        Capt = "Capt"
+        """Possible AWBW action types."""
+        FIRE = "Fire"
+        JOIN = "Join"
+        RESIGN = "Resign"
+        MOVE = "Move"
+        BUILD = "Build"
+        END = "End"
+        POWER = "Power"
+        CAPT = "Capt"
 
     def __init__(self, replay_action):
         super().__init__()
 
-        self.type = self.Type[replay_action["action"]]
+        self.type = self.Type(replay_action["action"])
         self.info = replay_action
 
 class AWBWGameState(game.GameState):
@@ -229,7 +233,8 @@ class AWBWGameState(game.GameState):
         new_player_info = deepcopy(move_state.players)
         for combatant, values in fire_action["copValues"].items():
             p_id = int(values["playerId"])
-            # For some reason, the replay data has the co power meter multiplied by a magnitude of 10
+            # For some reason, the replay data has the co power meter multiplied
+            # by a magnitude of 10.
             new_player_info[p_id]["co_power"] = int(values["copValue"]) / 10
 
         # Unit info
@@ -251,7 +256,6 @@ class AWBWGameState(game.GameState):
                         "ammo": unit["units_ammo"],
                         "fired": role == "attacker"
                 }
-        
         return AWBWGameState(
                 game_map=self.game_map,
                 players=new_player_info,
@@ -350,7 +354,7 @@ class AWBWGameState(game.GameState):
                 "moved": True,
                 "fuel": unit["units_fuel"]
             }
-        
+
         return AWBWGameState(
                 game_map=self.game_map,
                 players=self.players,
@@ -441,7 +445,9 @@ class AWBWGameState(game.GameState):
             for unit in v:
                 u_id = int(unit["units_id"])
                 assert u_id in new_unit_info
-                new_unit_info[u_id] = new_unit_info[u_id] | {"hit_points" : unit["units_hit_points"]}
+                new_unit_info[u_id] = new_unit_info[u_id] | {
+                    "hit_points": unit["units_hit_points"]
+                }
         # Unmark moved, captured, fired flags
         for u_id, unit in new_unit_info.items():
             unit["moved"] = False
@@ -507,14 +513,14 @@ class AWBWGameState(game.GameState):
                 game_info=move_state.game_info)
 
     _ACTION_TYPE_TO_APPLY_FUNC = {
-            AWBWGameAction.Type.Fire : _apply_fire_action,
-            AWBWGameAction.Type.Join : _apply_join_action,
-            AWBWGameAction.Type.Resign : _apply_resign_action,
-            AWBWGameAction.Type.Move : _apply_move_action,
-            AWBWGameAction.Type.Build : _apply_build_action,
-            AWBWGameAction.Type.End : _apply_end_action,
-            AWBWGameAction.Type.Power : _apply_power_action,
-            AWBWGameAction.Type.Capt : _apply_capt_action,
+            AWBWGameAction.Type.FIRE : _apply_fire_action,
+            AWBWGameAction.Type.JOIN : _apply_join_action,
+            AWBWGameAction.Type.RESIGN : _apply_resign_action,
+            AWBWGameAction.Type.MOVE : _apply_move_action,
+            AWBWGameAction.Type.BUILD : _apply_build_action,
+            AWBWGameAction.Type.END : _apply_end_action,
+            AWBWGameAction.Type.POWER : _apply_power_action,
+            AWBWGameAction.Type.CAPT : _apply_capt_action,
             }
 
     def apply_action(self, action):

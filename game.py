@@ -1,12 +1,11 @@
-# game.py
-#
-# Classes and code to manage game state.
+"""Classes and code to manage game state."""
 
 # Base classes
 
-class GameState():
+class GameState(): # pylint: disable=too-few-public-methods
     """
-    Represents a single state in the game. Each game state is transitioned between using actions.
+    Represents a single state in the game. Each game state is transitioned
+    between using actions.
     """
 
     def __init__(self):
@@ -14,7 +13,8 @@ class GameState():
 
     def apply_action(self, action):
         """
-        The main function defining a GameState. Applying an action to this game state produces a new game state.
+        The main function defining a GameState. Applying an action to this game
+        state produces a new game state.
 
         Arguments:
         - action: A GameAction
@@ -22,11 +22,12 @@ class GameState():
         Returns:
         - A new GameState
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
-class GameAction():
+class GameAction(): # pylint: disable=too-few-public-methods
     """
-    Represents a single action in the game. Used to transition between GameStates.
+    Represents a single action in the game. Used to transition between
+    GameStates.
     """
     def __init__(self):
         pass

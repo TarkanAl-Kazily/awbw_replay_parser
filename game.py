@@ -2,7 +2,7 @@
 
 # Base classes
 
-class GameState(): # pylint: disable=too-few-public-methods
+class GameState():
     """
     Represents a single state in the game. Each game state is transitioned
     between using actions.
@@ -24,7 +24,7 @@ class GameState(): # pylint: disable=too-few-public-methods
         """
         raise NotImplementedError()
 
-class GameAction(): # pylint: disable=too-few-public-methods
+class GameAction():
     """
     Represents a single action in the game. Used to transition between
     GameStates.

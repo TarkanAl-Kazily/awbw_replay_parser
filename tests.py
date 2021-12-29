@@ -13,8 +13,7 @@ import tempfile
 from replay import AWBWReplay
 #from awbw import AWBWGameAction, AWBWGameState
 
-# Pylint settings
-# pylint: disable=R0201
+# pylint: disable=no-self-use
 
 TEST_REPLAYS_DIR = "replays"
 

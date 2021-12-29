@@ -451,7 +451,7 @@ class AWBWGameState(game.GameState):
         """
         print("Capt action")
         print("IMPLEMENT ME")
-        pdb.set_trace()
+        #pdb.set_trace()
         # Building info
         # - capture status
         # - ownership status
@@ -512,20 +512,18 @@ class AWBWGameState(game.GameState):
 if __name__ == "__main__":
     import sys, os, pprint
     sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
-    from replay.replay import ReplayFile, Replay
-    with ReplayFile(sys.argv[1]) as replayfile:
-        r = Replay(replayfile)
-
-        state = AWBWGameState(replay_initial=r.game_info())
+    from replay.replay import AWBWReplay
+    with AWBWReplay(sys.argv[1]) as replay:
+        state = AWBWGameState(replay_initial=replay.game_info())
 
         action_number = 0
         print("Press enter to step through the replay")
-        for action in r.actions():
+        for action in replay.actions():
             action = AWBWGameAction(replay_action=action)
             state = state.apply_action(action)
             for p, player in state.players.items():
                 print(f"{p}: G {player['funds']}")
             action_number += 1
 
-        action_types = r.action_summaries()
+        action_types = replay.action_summaries()
         print(f"The action types were {set(action_types)}")

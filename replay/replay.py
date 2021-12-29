@@ -54,11 +54,11 @@ def sanitize_phpobject(phpobj):
 
     return phpobj, set(found_types)
 
-class ReplayFile():
+class AWBWReplay():
     """
     Usage:
 
-    with ReplayFile("52963.zip") as replay:
+    with AWBWReplay("52963.zip") as replay:
         ...
     """
 
@@ -121,23 +121,14 @@ class ReplayFile():
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
-# TODO: merge Replay with ReplayFile (cleaner code with fewer classes)
-class Replay():
-    """
-    Class to play back a replay from a ReplayFile
-    """
-
-    def __init__(self, replayfile):
-        self._r = replayfile
-
     def game_info(self):
-        return self._r._game
+        return self._game
 
     def turns(self):
         """
         Iterate over every turn in the game.
         """
-        return self._r._turns
+        return self._turns
 
     def actions(self):
         """
@@ -155,15 +146,14 @@ class Replay():
 
 if __name__ == "__main__":
     import pprint
-    with ReplayFile(sys.argv[1]) as replayfile:
-        r = Replay(replayfile)
+    with AWBWReplay(sys.argv[1]) as replay:
 
         print("Press enter to step through the replay")
-        for action in r.actions():
+        for action in replay.actions():
             if (action["action"] == "Fire"):
                 pprint.pp(action)
 
-        action_types = r.action_summaries()
+        action_types = replay.action_summaries()
         print(f"The action types were {set(action_types)}")
 
-        print(" ".join(r.action_summaries()))
+        print(" ".join(replay.action_summaries()))

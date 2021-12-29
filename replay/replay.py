@@ -121,6 +121,7 @@ class ReplayFile():
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
+# TODO: merge Replay with ReplayFile (cleaner code with fewer classes)
 class Replay():
     """
     Class to play back a replay from a ReplayFile
@@ -128,9 +129,9 @@ class Replay():
 
     def __init__(self, replayfile):
         self._r = replayfile
-        self._current_turn = 0
-        self._current_action = 0
-        self._max_turns = len(self._r._turns)
+
+    def game_info(self):
+        return self._r._game
 
     def turns(self):
         """
@@ -159,7 +160,8 @@ if __name__ == "__main__":
 
         print("Press enter to step through the replay")
         for action in r.actions():
-            pprint.pp(action)
+            if (action["action"] == "Fire"):
+                pprint.pp(action)
 
         action_types = r.action_summaries()
         print(f"The action types were {set(action_types)}")

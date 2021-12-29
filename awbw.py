@@ -58,6 +58,15 @@ class Unit(typing.TypedDict, total=False):
 
 class Building(typing.TypedDict, total=False):
     id: int = 0
+    capture: int = 20
+    # Corresponds to a terrain type, which includes the information about which country owns the building
+    # TODO: Reverse lookup the terrain ID to determine which player owns the property
+    # TODO: Reverse lookup the terrain ID to determine what type of property this is
+    terrain_id: int = 0
+    x: int = 0
+    y: int = 0
+    # Same as player id
+    team: int = 0
 
 # Derived classes for AWBW
 
@@ -168,7 +177,20 @@ class AWBWGameState(game.GameState):
 
     def _construct_initial_buildings(self, replay_initial_buildings):
         """Helper for just the building info"""
-        pass
+        self.buildings = {}
+        for i, building in replay_initial_buildings.items():
+            building_info = {}
+            building_keys_int = [
+                    "id",
+                    "capture",
+                    "last_capture",
+                    "terrain_id",
+                    "x",
+                    "y",
+            ]
+            for k in building_keys_int:
+                building_info[k] = int(building[k])
+            self.buildings[building_info["id"]] = Building(**building_info)
 
     def _construct_initial_game_info(self, replay_initial):
         """Helper for the global game info"""
@@ -184,8 +206,7 @@ class AWBWGameState(game.GameState):
         """Helper to construct a GameState from an AWBW Replay"""
         self._construct_initial_players(replay_initial["players"])
         self._construct_initial_units(replay_initial["units"])
-        # TODO
-        self.buildings = {}
+        self._construct_initial_buildings(replay_initial["buildings"])
         self._construct_initial_game_info(replay_initial)
 
     def _apply_fire_action(self, action_data):
@@ -341,7 +362,7 @@ class AWBWGameState(game.GameState):
         """
         Helper for build actions
         """
-        print("Build action")
+        logging.debug("Build action")
 
         info = action_data["newUnit"]
         # Unit info
@@ -384,7 +405,7 @@ class AWBWGameState(game.GameState):
         """
         Helper for end actions
         """
-        print("End action")
+        logging.debug("End action")
         info = action_data["updatedInfo"]
         # GameInfo Info - new active player
         new_global_info = self.game_info | {
@@ -409,7 +430,7 @@ class AWBWGameState(game.GameState):
         new_global_info["day"] = max(turn_counts)
 
         # Unit info
-        # - resupply
+        # - TODO resupply
         # - fuel cost
         # - sank / crashed units
         new_unit_info = deepcopy(self.units)
@@ -457,17 +478,33 @@ class AWBWGameState(game.GameState):
         """
         Helper for capt actions
         """
-        print("Capt action")
-        print("IMPLEMENT ME")
-        #pdb.set_trace()
-        # Building info
-        # - capture status
-        # - ownership status
-
+        logging.debug("Capt action")
+        move_state = self
+        if "Move" in action_data and isinstance(action_data["Move"], dict):
+            move_state = move_state._apply_move_action(action_data["Move"])
         # Unit info
         # - position change
         # - fuel change
-        return deepcopy(self)
+
+        # Building info
+        # - capture status
+        # - ownership status
+        capt_action = action_data["Capt"]
+        buildingInfo = capt_action["buildingInfo"]
+        b_id = int(buildingInfo["buildings_id"])
+        assert b_id in move_state.buildings
+        new_building_info = deepcopy(move_state.buildings)
+        new_building_info[b_id] = new_building_info[b_id] | {
+            "capture": buildingInfo["buildings_capture"],
+            "team": buildingInfo["buildings_team"],
+        }
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=move_state.units,
+                buildings=new_building_info,
+                game_info=move_state.game_info)
 
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.Fire : _apply_fire_action,

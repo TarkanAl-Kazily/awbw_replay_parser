@@ -13,7 +13,7 @@ setup(
     # Needed to actually package something
     packages=['awbw_replay'],
     # Needed for dependencies
-    install_requires=['parse, phpserialize'],
+    install_requires=['parse', 'phpserialize'],
     # *strongly* suggested for sharing
     version='0.1',
     # The license can be anything you like

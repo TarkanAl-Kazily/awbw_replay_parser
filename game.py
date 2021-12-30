@@ -46,11 +46,11 @@ class DefaultDict(collections.UserDict):
         if data is None:
             data = {}
 
-        data = data | kwargs
+        data = {**data, **kwargs}
 
         # Check that only the supported keys are present
         for key in data:
             if key not in self.ALLOWED_DATA:
                 raise KeyError(f"{key} is not supported for {self.__class__.__name__}")
 
-        super().__init__(self.ALLOWED_DATA | data)
+        super().__init__({**self.ALLOWED_DATA, **data})

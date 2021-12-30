@@ -19,10 +19,14 @@
 - [X] P0: Support tracking which day it is
 - [X] P1: Add a contribution guide
 - [X] P1: Add batch testing for multiple replay files
+- [X] P1: Create a google collab / github interactive notebook for anyone to enter a replay ID and use Python to inspect state over time
+  - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
+  - Find a workaround for Python 3.8 not being supported (typing.TypedDict)
 
 # Up next
 
 - [ ] P0: Update the README with common actions / workflows
+  - Add some questions to the Google colab file for auto-analysis
 - [ ] P0: Expand main.py to output a summary of all the tested replay files.
   - CSV format
   - Include the exception replay parsing failed on, if any
@@ -32,9 +36,6 @@
   - Powers
   - Launch
   - Hide / Reveal / Dive / Rise ?
-- [ ] P1: Create a google collab / github interactive notebook for anyone to enter a replay ID and use Python to inspect state over time
-  - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
-  - Find a workaround for Python 3.8 not being supported (typing.TypedDict)
 
 # Low-Pri ideas
 

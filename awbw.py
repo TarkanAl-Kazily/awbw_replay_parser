@@ -268,10 +268,14 @@ class AWBWGameState(game.GameState):
                     continue
                 u_id = int(unit["units_id"])
                 assert u_id in new_unit_info
-                new_unit_info[u_id] = new_unit_info[u_id] | {
-                        "hit_points": unit["units_hit_points"],
-                        "ammo": unit["units_ammo"],
-                        "fired": role == "attacker"
+                updated_unit_data = {
+                    "hit_points": unit["units_hit_points"],
+                    "ammo": unit["units_ammo"],
+                    "fired": role == "attacker",
+                }
+                new_unit_info[u_id] = {
+                    **new_unit_info[u_id],
+                    **updated_unit_data,
                 }
         return AWBWGameState(
                 game_map=self.game_map,
@@ -386,12 +390,13 @@ class AWBWGameState(game.GameState):
                     unit_info[k] = unit[prefix + k]
                 new_unit_info[u_id] = Unit(**unit_info)
 
-            new_unit_info[u_id] = new_unit_info[u_id] | {
+            updated_unit_data = {
                 "x" : unit["units_x"],
                 "y": unit["units_y"],
                 "moved": True,
                 "fuel": unit["units_fuel"]
             }
+            new_unit_info[u_id] = {**new_unit_info[u_id], **updated_unit_data}
 
         return AWBWGameState(
                 game_map=self.game_map,
@@ -452,12 +457,13 @@ class AWBWGameState(game.GameState):
         """
         logging.debug("End action")
         info = action_data["updatedInfo"]
-        # GameInfo Info - new active player
-        new_global_info = deepcopy(self.game_info) | {
+        # GameInfo Info - new active player, turn, and day
+        updated_game_info = {
             "active_player_id": int(info["nextPId"]),
             "turn": self.game_info["turn"] + 1,
             "day": int(info["day"]),
         }
+        new_global_info = {**self.game_info, **updated_game_info}
 
         # Player info
         # - funds change
@@ -465,8 +471,11 @@ class AWBWGameState(game.GameState):
         funds_info = info["nextFunds"]
         p_id = info["nextPId"]
         for value in funds_info.values():
+            # This is definiely weird. We have to do it this way because in Fog
+            # matches, funds are hidden from some players, and therefore there
+            # is a view on the newFunds variable, with the hidden values being ''
             if isinstance(value, int):
-                new_player_info[p_id] = new_player_info[p_id] | {"funds": value}
+                new_player_info[p_id]["funds"] = value
                 break
         new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
 
@@ -483,9 +492,7 @@ class AWBWGameState(game.GameState):
                 if u_id not in new_unit_info:
                     logging.warning("Unknown unit id %d in repair info", u_id)
                     continue
-                new_unit_info[u_id] = new_unit_info[u_id] | {
-                    "hit_points": unit["units_hit_points"]
-                }
+                new_unit_info[u_id]["hit_points"] = unit["units_hit_points"]
         # Unmark moved, captured, fired flags
         for u_id, unit in new_unit_info.items():
             unit["moved"] = False
@@ -538,10 +545,8 @@ class AWBWGameState(game.GameState):
         b_id = int(building["buildings_id"])
         assert b_id in move_state.buildings
         new_building_info = deepcopy(move_state.buildings)
-        new_building_info[b_id] = new_building_info[b_id] | {
-            "capture": building["buildings_capture"],
-            "team": building["buildings_team"],
-        }
+        new_building_info[b_id]["capture"] = building["buildings_capture"]
+        new_building_info[b_id]["team"] = building["buildings_team"]
 
         return AWBWGameState(
                 game_map=move_state.game_map,

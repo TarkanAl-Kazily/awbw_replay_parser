@@ -117,6 +117,9 @@ class AWBWReplay():
             phpactions = phpobj[2]
             actions = []
             for jsonstr in phpactions.values():
+                if not "action" in jsonstr:
+                    logging.debug("Skipping invalid action string")
+                    continue
                 actions.append(json.loads(jsonstr))
             result.append(RawTurn(playerId=parsed["playerId"], day=parsed["day"], actions=actions))
 

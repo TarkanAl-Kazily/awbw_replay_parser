@@ -1,6 +1,5 @@
 """Classes specific to AWBW Game States and Actions"""
 
-import pdb # pylint: disable=unused-import
 import logging
 from enum import Enum
 from copy import deepcopy
@@ -258,8 +257,7 @@ class AWBWGameState(game.GameState):
         # - ammo change
         # - health change
         new_unit_info = deepcopy(move_state.units)
-        for p_id, combatinfo in fire_action["combatInfoVision"].items():
-            p_id = int(p_id)
+        for combatinfo in fire_action["combatInfoVision"].values():
             if not isinstance(combatinfo, dict) or not isinstance(combatinfo["combatInfo"], dict):
                 continue
             for role, unit in combatinfo["combatInfo"].items():
@@ -354,12 +352,11 @@ class AWBWGameState(game.GameState):
         # Unit info
         # - position change
         # - fuel change
-        for p_id, unit in action_data["unit"].items():
-            p_id = int(p_id)
+        for unit in action_data["unit"].values():
             if not isinstance(unit, dict):
                 continue
-            if not unit["units_players_id"] == p_id:
-                # Not the unit that moved, just another player's view of the unit.
+            if not "units_x" in unit or not "units_y" in unit:
+                # Just another player's view of the unit.
                 # Because it's another player's view, it won't have the full unit info
                 # in the case where the unit moves back into the fog.
                 continue
@@ -437,14 +434,13 @@ class AWBWGameState(game.GameState):
 
         # Player info
         # - funds change
-        new_player_info = {}
+        new_player_info = deepcopy(self.players)
         funds_info = info["nextFunds"]
-        for key, value in funds_info.items():
-            p_id = int(key)
+        p_id = info["nextPId"]
+        for value in funds_info.values():
             if isinstance(value, int):
                 new_player_info[p_id] = self.players[p_id] | {"funds": value}
-            else:
-                new_player_info[p_id] = self.players[p_id]
+                break
         new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
 
         # Increment day by using the maximum turn count of all players
@@ -457,8 +453,7 @@ class AWBWGameState(game.GameState):
         # - sank / crashed units
         new_unit_info = deepcopy(self.units)
         repaired_info = info["repaired"]
-        for key, value in repaired_info.items():
-            p_id = int(key)
+        for value in repaired_info.values():
             assert isinstance(value, list)
             for unit in value:
                 u_id = int(unit["units_id"])

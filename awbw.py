@@ -575,10 +575,46 @@ class AWBWGameState(game.GameState):
         """
         logging.debug("Unload action")
 
-        # TODO
-        pdb.set_trace()
+        new_unit_info = deepcopy(self.units)
+        transport_id = action_data["transportID"]
+        unit = None
+        for p_id, value in action_data["unit"].items():
+            p_id = int(p_id)
+            if isinstance(value, dict) and value["units_players_id"] == p_id:
+                unit = value
+                break
+        assert unit is not None
+        loaded_id = unit["units_id"]
+        if new_unit_info[transport_id]["cargo1_units_id"] == loaded_id:
+            new_unit_info[transport_id]["cargo1_units_id"] = 0
+        else:
+            new_unit_info[transport_id]["cargo2_units_id"] = 0
 
-        return deepcopy(self)
+        unit_keys_int = [
+                "id",
+                "players_id",
+                "fuel",
+                "fuel_per_turn",
+                "ammo",
+                "cost",
+                "x",
+                "y",
+                "hit_points"
+        ]
+        prefix = "units_"
+        unit_keys_str = ["name", "symbol", "movement_type"]
+        for k in unit_keys_int:
+            new_unit_info[loaded_id][k] = int(unit[prefix + k])
+        for k in unit_keys_str:
+            new_unit_info[loaded_id][k] = unit[prefix + k]
+        new_unit_info[loaded_id]["carried"] = False
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=self.players,
+                units=new_unit_info,
+                buildings=self.buildings,
+                game_info=self.game_info)
 
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.FIRE : _apply_fire_action,

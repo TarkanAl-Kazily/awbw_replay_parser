@@ -88,6 +88,8 @@ class AWBWGameAction(game.GameAction):
         END = "End"
         POWER = "Power"
         CAPT = "Capt"
+        LOAD = "Load"
+        UNLOAD = "Unload"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -223,10 +225,9 @@ class AWBWGameState(game.GameState):
 
         # Unit info
         # - position change
-        move_state = deepcopy(self)
+        move_state = self
         if "Move" in action_data and isinstance(action_data["Move"], dict):
-            # pylint: disable=protected-access
-            move_state = move_state._apply_move_action(action_data["Move"])
+            move_state = self._apply_move_action(action_data["Move"])
 
         fire_action = action_data["Fire"]
         assert isinstance(fire_action, dict)
@@ -273,7 +274,6 @@ class AWBWGameState(game.GameState):
         logging.debug("Join action")
         # To join two units, one must be moved
         assert "Move" in action_data
-        # pylint: disable=protected-access
         move_state = self._apply_move_action(action_data["Move"])
 
         join_action = action_data["Join"]
@@ -376,6 +376,7 @@ class AWBWGameState(game.GameState):
         # Unit info
         # - new unit
         built_unit = {}
+        new_unit_info = deepcopy(self.units)
         for unit in info.values():
             unit_keys_int = [
                     "id",
@@ -391,10 +392,10 @@ class AWBWGameState(game.GameState):
             prefix = "units_"
             unit_keys_str = ["name", "symbol", "movement_type"]
             for k in unit_keys_int:
-                built_unit[k] = unit[prefix + k]
+                built_unit[k] = int(unit[prefix + k])
             for k in unit_keys_str:
                 built_unit[k] = unit[prefix + k]
-            new_unit_info = deepcopy(self.units) | {built_unit["id"] : Unit(**built_unit)}
+            new_unit_info[built_unit["id"]] = Unit(**built_unit)
 
         # Player info
         # - funds change
@@ -491,8 +492,7 @@ class AWBWGameState(game.GameState):
         logging.debug("Capt action")
         move_state = self
         if "Move" in action_data and isinstance(action_data["Move"], dict):
-            # pylint: disable=protected-access
-            move_state = move_state._apply_move_action(action_data["Move"])
+            move_state = self._apply_move_action(action_data["Move"])
         # Unit info
         # - position change
         # - fuel change
@@ -517,6 +517,56 @@ class AWBWGameState(game.GameState):
                 buildings=new_building_info,
                 game_info=move_state.game_info)
 
+    def _apply_load_action(self, action_data):
+        """
+        Helper for load actions
+        """
+        logging.debug("Load action")
+
+        # To load a unit into a transport, one must be moved
+        assert "Move" in action_data
+        move_state = self._apply_move_action(action_data["Move"])
+
+        # Mark transport as carrying a unit, and the loaded unit as being carried
+        load_action = action_data["Load"]
+        loaded_id = 0
+        transport_id = 0
+        for u_id in load_action["loaded"].values():
+            if isinstance(u_id, int):
+                loaded_id = u_id
+                break
+        for u_id in load_action["transport"].values():
+            if isinstance(u_id, int):
+                transport_id = u_id
+                break
+
+        new_unit_info = deepcopy(move_state.units)
+        # Units must already exist to be loaded / moved
+        assert (loaded_id in new_unit_info) and (transport_id in new_unit_info)
+        new_unit_info[loaded_id]["carried"] = True
+        if new_unit_info[transport_id]["cargo1_units_id"] == 0:
+            new_unit_info[transport_id]["cargo1_units_id"] = loaded_id
+        else:
+            new_unit_info[transport_id]["cargo2_units_id"] = loaded_id
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
+    def _apply_unload_action(self, action_data):
+        """
+        Helper for unload actions
+        """
+        logging.debug("Unload action")
+
+        # TODO
+        pdb.set_trace()
+
+        return deepcopy(self)
+
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.FIRE : _apply_fire_action,
             AWBWGameAction.Type.JOIN : _apply_join_action,
@@ -526,6 +576,8 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.END : _apply_end_action,
             AWBWGameAction.Type.POWER : _apply_power_action,
             AWBWGameAction.Type.CAPT : _apply_capt_action,
+            AWBWGameAction.Type.LOAD : _apply_load_action,
+            AWBWGameAction.Type.UNLOAD : _apply_unload_action,
             }
 
     def apply_action(self, action):

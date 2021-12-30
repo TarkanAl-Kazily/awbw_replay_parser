@@ -1,5 +1,7 @@
 """Classes and code to manage game state."""
 
+import collections
+
 # Base classes
 
 class GameState():
@@ -31,3 +33,24 @@ class GameAction():
     """
     def __init__(self):
         pass
+
+class DefaultDict(collections.UserDict):
+    """
+    An extension of UserDict that asserts the only constructed keys are the ones
+    in ALLOWED_DATA, and assigns defaults according to the unassigned keys.
+    """
+
+    ALLOWED_DATA = {}
+
+    def __init__(self, data=None, **kwargs):
+        if data is None:
+            data = {}
+
+        data = data | kwargs
+
+        # Check that only the supported keys are present
+        for key in data:
+            if key not in self.ALLOWED_DATA:
+                raise KeyError(f"{key} is not supported for {self.__class__.__name__}")
+
+        super().__init__(self.ALLOWED_DATA | data)

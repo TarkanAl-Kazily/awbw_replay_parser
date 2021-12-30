@@ -1,75 +1,87 @@
 """Classes specific to AWBW Game States and Actions"""
 
-import pdb # pylint: disable=unused-import
 import logging
 from enum import Enum
 from copy import deepcopy
-import typing
+
 import game
 
-class GameInfo(typing.TypedDict, total=False):
+class GameInfo(game.DefaultDict):
     """Stores general information about the game"""
-    games_id: int = 0
-    active_player_id: int = 0
-    maps_id: int = 0
-    turn: int = 0
-    day: int = 0
 
-class Player(typing.TypedDict, total=False):
+    ALLOWED_DATA = {
+        "games_id": 0,
+        "active_player_id": 0,
+        "maps_id": 0,
+        "turn": 0,
+        "day": 0,
+    }
+
+class Player(game.DefaultDict):
     """Stores per player information."""
-    id: int = 0
-    team: int = 0
-    users_id: int = 0
-    countries_id: int = 0
-    co_id: int = 0
-    co_max_power: int = 0
-    co_max_spower: int = 0
-    co_power: int = 0
-    co_power_on: bool = False
-    eliminated: bool = False
-    funds: int = 0
-    turn_count: int = 0
 
-class Unit(typing.TypedDict, total=False):
+    ALLOWED_DATA = {
+        "id": 0,
+        "team": 0,
+        "users_id": 0,
+        "countries_id": 0,
+        "co_id": 0,
+        "co_max_power": 0,
+        "co_max_spower": 0,
+        "co_power": 0,
+        "co_power_on": False,
+        "eliminated": False,
+        "funds": 0,
+        "turn_count": 0,
+    }
+
+class Unit(game.DefaultDict):
     """Stores per unit information."""
-    id: int = 0
-    players_id: int = 0
-    name: str = "Unit"
-    movement_points: int = 0
-    vision: int = 0
-    fuel: int = 0
-    fuel_per_turn: int = 0
-    sub_dive: bool = False
-    ammo: int = 0
-    short_range: int = 0
-    long_range: int = 0
-    second_weapon: bool = False
-    symbol: str = "U"
-    cost: int = 0
-    movement_type: str = "F"
-    x: int = 0
-    y: int = 0
-    moved: bool = False
-    capture: bool = False
-    fired: bool = False
-    hit_points: int = 10
-    cargo1_units_id: int = 0
-    cargo2_units_id: int = 0
-    carried: bool = False
 
-class Building(typing.TypedDict, total=False):
+    ALLOWED_DATA = {
+        "id": 0,
+        "players_id": 0,
+        "name": "Unit",
+        "movement_points": 0,
+        "vision": 0,
+        "fuel": 0,
+        "fuel_per_turn": 0,
+        "sub_dive": False,
+        "ammo": 0,
+        "short_range": 0,
+        "long_range": 0,
+        "second_weapon": False,
+        "symbol": "U",
+        "cost": 0,
+        "movement_type": "F",
+        "x": 0,
+        "y": 0,
+        "moved": False,
+        "capture": False,
+        "fired": False,
+        "hit_points": 10,
+        "cargo1_units_id": 0,
+        "cargo2_units_id": 0,
+        "carried": False,
+    }
+
+class Building(game.DefaultDict):
     """Stores per building information."""
-    id: int = 0
-    capture: int = 20
-    # Corresponds to a terrain type, which includes the information about which
-    # country owns the building.
-    # TODO: Reverse lookup the terrain ID to determine which player owns the property
-    # TODO: Reverse lookup the terrain ID to determine what type of property this is
-    terrain_id: int = 0
-    x: int = 0
-    y: int = 0
-    # Same as player id
-    team: int = 0
+
+    ALLOWED_DATA = {
+        "id": 0,
+        "last_capture": 20,
+        "capture": 20,
+        # Corresponds to a terrain type, which includes the information about which
+        # country owns the building.
+        # TODO": Reverse lookup the terrain ID to determine which player owns the property
+        # TODO": Reverse lookup the terrain ID to determine what type of property this is
+        "terrain_id": 0,
+        "x": 0,
+        "y": 0,
+        # Same as player id
+        "team": 0,
+    }
 
 # Derived classes for AWBW
 
@@ -88,6 +100,10 @@ class AWBWGameAction(game.GameAction):
         END = "End"
         POWER = "Power"
         CAPT = "Capt"
+        LOAD = "Load"
+        UNLOAD = "Unload"
+        REPAIR = "Repair"
+        SUPPLY = "Supply"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -223,10 +239,9 @@ class AWBWGameState(game.GameState):
 
         # Unit info
         # - position change
-        move_state = deepcopy(self)
+        move_state = self
         if "Move" in action_data and isinstance(action_data["Move"], dict):
-            # pylint: disable=protected-access
-            move_state = move_state._apply_move_action(action_data["Move"])
+            move_state = self._apply_move_action(action_data["Move"])
 
         fire_action = action_data["Fire"]
         assert isinstance(fire_action, dict)
@@ -244,8 +259,7 @@ class AWBWGameState(game.GameState):
         # - ammo change
         # - health change
         new_unit_info = deepcopy(move_state.units)
-        for p_id, combatinfo in fire_action["combatInfoVision"].items():
-            p_id = int(p_id)
+        for combatinfo in fire_action["combatInfoVision"].values():
             if not isinstance(combatinfo, dict) or not isinstance(combatinfo["combatInfo"], dict):
                 continue
             for role, unit in combatinfo["combatInfo"].items():
@@ -273,14 +287,12 @@ class AWBWGameState(game.GameState):
         logging.debug("Join action")
         # To join two units, one must be moved
         assert "Move" in action_data
-        # pylint: disable=protected-access
         move_state = self._apply_move_action(action_data["Move"])
 
         join_action = action_data["Join"]
         # The unit that now has 0 health due to joining
         joined_u_id = None
-        for p_id, u_id in join_action["joinID"].items():
-            p_id = int(p_id)
+        for u_id in join_action["joinID"].values():
             if isinstance(u_id, int):
                 joined_u_id = u_id
                 break
@@ -289,23 +301,24 @@ class AWBWGameState(game.GameState):
         new_unit_info = deepcopy(move_state.units)
         # Set hit points of old unit to 0 to indicate it no longer exists
         new_unit_info[joined_u_id]["hit_points"] = 0
+        p_id = new_unit_info[joined_u_id]["players_id"]
 
         # Player info
         # - funds change
         new_player_info = deepcopy(move_state.players)
-        for p_id, funds in join_action["newFunds"].items():
-            p_id = int(p_id)
-            new_player_info[p_id]["funds"] = funds
+        for funds in join_action["newFunds"].values():
+            if isinstance(funds, int):
+                new_player_info[p_id]["funds"] = funds
+                break
 
         # Unit info
         # - ammo change
         # - health change
         unit_info = join_action["unit"]
-        for p_id, unit in unit_info.items():
-            p_id = int(p_id)
+        for unit in unit_info.values():
             if not isinstance(unit, dict):
                 continue
-            if not unit["units_players_id"] == p_id:
+            if "units_x" not in unit or "units_y" not in unit:
                 # Not the unit that moved, just another player's view of the unit.
                 # Because it's another player's view, it won't have the full unit info
                 # in the case where the unit moves back into the fog.
@@ -341,17 +354,38 @@ class AWBWGameState(game.GameState):
         # Unit info
         # - position change
         # - fuel change
-        for p_id, unit in action_data["unit"].items():
-            p_id = int(p_id)
+        for unit in action_data["unit"].values():
             if not isinstance(unit, dict):
                 continue
-            if not unit["units_players_id"] == p_id:
-                # Not the unit that moved, just another player's view of the unit.
+            if not "units_x" in unit or not "units_y" in unit:
+                # Just another player's view of the unit.
                 # Because it's another player's view, it won't have the full unit info
                 # in the case where the unit moves back into the fog.
                 continue
             u_id = unit["units_id"]
-            assert u_id in new_unit_info
+            if u_id not in new_unit_info:
+                logging.warning("Unknown unit id %d in move info", u_id)
+                logging.debug("Creating new unit %d from move info", u_id)
+                unit_info = {}
+                unit_keys_int = [
+                        "id",
+                        "players_id",
+                        "fuel",
+                        "fuel_per_turn",
+                        "ammo",
+                        "cost",
+                        "x",
+                        "y",
+                        "hit_points"
+                ]
+                prefix = "units_"
+                unit_keys_str = ["name", "symbol", "movement_type"]
+                for k in unit_keys_int:
+                    unit_info[k] = int(unit[prefix + k])
+                for k in unit_keys_str:
+                    unit_info[k] = unit[prefix + k]
+                new_unit_info[u_id] = Unit(**unit_info)
+
             new_unit_info[u_id] = new_unit_info[u_id] | {
                 "x" : unit["units_x"],
                 "y": unit["units_y"],
@@ -376,6 +410,7 @@ class AWBWGameState(game.GameState):
         # Unit info
         # - new unit
         built_unit = {}
+        new_unit_info = deepcopy(self.units)
         for unit in info.values():
             unit_keys_int = [
                     "id",
@@ -391,15 +426,17 @@ class AWBWGameState(game.GameState):
             prefix = "units_"
             unit_keys_str = ["name", "symbol", "movement_type"]
             for k in unit_keys_int:
-                built_unit[k] = unit[prefix + k]
+                built_unit[k] = int(unit[prefix + k])
             for k in unit_keys_str:
                 built_unit[k] = unit[prefix + k]
-            new_unit_info = deepcopy(self.units) | {built_unit["id"] : Unit(**built_unit)}
+            new_unit_info[built_unit["id"]] = Unit(**built_unit)
 
         # Player info
         # - funds change
         new_player_info = deepcopy(self.players)
         p_id = built_unit["players_id"]
+        if not p_id == self.game_info["active_player_id"]:
+            logging.warning("Build action for non-active player %d", p_id)
         new_player_info[p_id]["funds"] -= built_unit["cost"]
 
         return AWBWGameState(
@@ -416,26 +453,22 @@ class AWBWGameState(game.GameState):
         logging.debug("End action")
         info = action_data["updatedInfo"]
         # GameInfo Info - new active player
-        new_global_info = self.game_info | {
+        new_global_info = deepcopy(self.game_info) | {
             "active_player_id": int(info["nextPId"]),
             "turn": self.game_info["turn"] + 1,
+            "day": int(info["day"]),
         }
 
         # Player info
         # - funds change
-        new_player_info = {}
+        new_player_info = deepcopy(self.players)
         funds_info = info["nextFunds"]
-        for key, value in funds_info.items():
-            p_id = int(key)
+        p_id = info["nextPId"]
+        for value in funds_info.values():
             if isinstance(value, int):
-                new_player_info[p_id] = self.players[p_id] | {"funds": value}
-            else:
-                new_player_info[p_id] = self.players[p_id]
+                new_player_info[p_id] = new_player_info[p_id] | {"funds": value}
+                break
         new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
-
-        # Increment day by using the maximum turn count of all players
-        turn_counts = [p["turn_count"] for p in new_player_info.values()]
-        new_global_info["day"] = max(turn_counts)
 
         # Unit info
         # - TODO resupply
@@ -443,12 +476,13 @@ class AWBWGameState(game.GameState):
         # - sank / crashed units
         new_unit_info = deepcopy(self.units)
         repaired_info = info["repaired"]
-        for key, value in repaired_info.items():
-            p_id = int(key)
+        for value in repaired_info.values():
             assert isinstance(value, list)
             for unit in value:
                 u_id = int(unit["units_id"])
-                assert u_id in new_unit_info
+                if u_id not in new_unit_info:
+                    logging.warning("Unknown unit id %d in repair info", u_id)
+                    continue
                 new_unit_info[u_id] = new_unit_info[u_id] | {
                     "hit_points": unit["units_hit_points"]
                 }
@@ -491,8 +525,7 @@ class AWBWGameState(game.GameState):
         logging.debug("Capt action")
         move_state = self
         if "Move" in action_data and isinstance(action_data["Move"], dict):
-            # pylint: disable=protected-access
-            move_state = move_state._apply_move_action(action_data["Move"])
+            move_state = self._apply_move_action(action_data["Move"])
         # Unit info
         # - position change
         # - fuel change
@@ -517,6 +550,154 @@ class AWBWGameState(game.GameState):
                 buildings=new_building_info,
                 game_info=move_state.game_info)
 
+    def _apply_repair_action(self, action_data):
+        """
+        Helper for repair actions
+        """
+        logging.debug("Repair action")
+        move_state = self
+        if "Move" in action_data and isinstance(action_data["Move"], dict):
+            move_state = self._apply_move_action(action_data["Move"])
+        # Unit info
+        # - fuel change
+        # - hitpoint change
+        new_unit_info = deepcopy(move_state.units)
+
+        repair_info = action_data["Repair"]
+        p_id = None
+        for value in repair_info["repaired"].values():
+            if isinstance(value, dict):
+                new_unit_info[value["units_id"]]["hit_points"] = value["units_hit_points"]
+                p_id = new_unit_info[value["units_id"]]["players_id"]
+                break
+        assert p_id is not None
+
+        # Player info
+        # - funds change
+        new_player_info = deepcopy(move_state.players)
+        assert p_id in new_player_info
+        funds = None
+        for value in repair_info["funds"].values():
+            if isinstance(value, int):
+                funds = value
+                break
+        new_player_info[p_id]["funds"] = funds
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=new_player_info,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
+    def _apply_supply_action(self, action_data):
+        """
+        Helper for supply actions
+        """
+        logging.debug("Supply action")
+        move_state = self
+        if "Move" in action_data and isinstance(action_data["Move"], dict):
+            move_state = self._apply_move_action(action_data["Move"])
+
+        # No funds change on supply.
+
+        # Unit info
+        # - fuel change
+        # The supply data doesn't actually include the new fuel values,
+        # so for now we'll only handle the move part.
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=move_state.units,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
+    def _apply_load_action(self, action_data):
+        """
+        Helper for load actions
+        """
+        logging.debug("Load action")
+
+        # To load a unit into a transport, one must be moved
+        assert "Move" in action_data
+        move_state = self._apply_move_action(action_data["Move"])
+
+        # Mark transport as carrying a unit, and the loaded unit as being carried
+        load_action = action_data["Load"]
+        loaded_id = 0
+        transport_id = 0
+        for u_id in load_action["loaded"].values():
+            if isinstance(u_id, int):
+                loaded_id = u_id
+                break
+        for u_id in load_action["transport"].values():
+            if isinstance(u_id, int):
+                transport_id = u_id
+                break
+
+        new_unit_info = deepcopy(move_state.units)
+        # Units must already exist to be loaded / moved
+        assert (loaded_id in new_unit_info) and (transport_id in new_unit_info)
+        new_unit_info[loaded_id]["carried"] = True
+        if new_unit_info[transport_id]["cargo1_units_id"] == 0:
+            new_unit_info[transport_id]["cargo1_units_id"] = loaded_id
+        else:
+            new_unit_info[transport_id]["cargo2_units_id"] = loaded_id
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
+    def _apply_unload_action(self, action_data):
+        """
+        Helper for unload actions
+        """
+        logging.debug("Unload action")
+
+        new_unit_info = deepcopy(self.units)
+        transport_id = action_data["transportID"]
+        unit = None
+        for value in action_data["unit"].values():
+            if isinstance(value, dict) and "units_x" in value and "units_y" in value:
+                unit = value
+                break
+        assert unit is not None
+        loaded_id = unit["units_id"]
+        if new_unit_info[transport_id]["cargo1_units_id"] == loaded_id:
+            new_unit_info[transport_id]["cargo1_units_id"] = 0
+        else:
+            new_unit_info[transport_id]["cargo2_units_id"] = 0
+
+        unit_keys_int = [
+                "id",
+                "players_id",
+                "fuel",
+                "fuel_per_turn",
+                "ammo",
+                "cost",
+                "x",
+                "y",
+                "hit_points"
+        ]
+        prefix = "units_"
+        unit_keys_str = ["name", "symbol", "movement_type"]
+        for k in unit_keys_int:
+            new_unit_info[loaded_id][k] = int(unit[prefix + k])
+        for k in unit_keys_str:
+            new_unit_info[loaded_id][k] = unit[prefix + k]
+        new_unit_info[loaded_id]["carried"] = False
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=self.players,
+                units=new_unit_info,
+                buildings=self.buildings,
+                game_info=self.game_info)
+
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.FIRE : _apply_fire_action,
             AWBWGameAction.Type.JOIN : _apply_join_action,
@@ -526,6 +707,10 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.END : _apply_end_action,
             AWBWGameAction.Type.POWER : _apply_power_action,
             AWBWGameAction.Type.CAPT : _apply_capt_action,
+            AWBWGameAction.Type.LOAD : _apply_load_action,
+            AWBWGameAction.Type.UNLOAD : _apply_unload_action,
+            AWBWGameAction.Type.REPAIR : _apply_repair_action,
+            AWBWGameAction.Type.SUPPLY : _apply_supply_action,
             }
 
     def apply_action(self, action):

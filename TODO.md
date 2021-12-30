@@ -18,21 +18,22 @@
 - [X] P0: Use matplotlib to plot numbers from game state over time (actions)
 - [X] P0: Support tracking which day it is
 - [X] P1: Add a contribution guide
+- [X] P1: Add batch testing for multiple replay files
 
 # Up next
 
+- [ ] P0: Update the README with common actions / workflows
 - [ ] P1: Continue adding support for more action types
   - Resign
   - Powers
-  - Load / Unload
   - Launch
+  - Hide / Reveal / Dive / Rise ?
 - [ ] P1: Create a google collab / github interactive notebook for anyone to enter a replay ID and use Python to inspect state over time
   - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
   - Find a workaround for Python 3.8 not being supported (typing.TypedDict)
 
 # Low-Pri ideas
 
-- [ ] P1: Add batch testing for multiple replay files
 - [ ] P1: Pull replay files from an external file hosting solution (GDrive)
 - [ ] P1: Open a map (.txt) as input. Get out a picture of the terrain.
 - [ ] P1: From a map id, download the text format for the terrain automatically.

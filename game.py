@@ -46,7 +46,7 @@ class DefaultDict(collections.UserDict):
         if data is None:
             data = {}
 
-        data = data | kwargs
+        data = {**data, **kwargs}
 
         # Check that only the supported keys are present
         for key in data:

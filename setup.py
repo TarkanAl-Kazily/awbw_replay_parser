@@ -1,5 +1,8 @@
 """Initialize the awbw_replay package"""
 from setuptools import setup
+import os.path
+
+README = os.path.join(__file__, "README.md")
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
@@ -18,5 +21,5 @@ setup(
     description='Python library to parse AWBW game replay files',
     # We will also need a readme eventually (there will be a warning)
     # pylint: disable=consider-using-with
-    long_description=open('README.md', 'r', encoding='utf-8').read(),
+    long_description=open(README, 'r', encoding='utf-8').read(),
 )

@@ -2,7 +2,7 @@
 from setuptools import setup
 import os.path
 
-README = os.path.join(__file__, "README.md")
+README = os.path.join(os.path.dirname(__file__), "README.md")
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)

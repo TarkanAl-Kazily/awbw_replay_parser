@@ -150,17 +150,43 @@ class AWBWReplay():
         for _action in self.actions():
             yield _action["action"]
 
+def find_in(collection, obj):
+    """Return all instances where some string appears"""
+    result = []
+    if isinstance(collection, list):
+        for entry in collection:
+            subresult = find_in(entry, obj)
+            if subresult:
+                result += subresult
+                result.append(collection)
+
+    elif isinstance(collection, dict):
+        for entry in collection.keys():
+            subresult = find_in(entry, obj)
+            if subresult:
+                result += subresult
+                result.append(collection)
+        for entry in collection.values():
+            subresult = find_in(entry, obj)
+            if subresult:
+                result += subresult
+                result.append(collection)
+
+    elif isinstance(collection, str):
+        if str(obj) in collection:
+            result.append(collection)
+    
+    else:
+        if obj == collection:
+            result.append(collection)
+
+    return result
+
+
 # Basic test code for opening a replay file
 if __name__ == "__main__":
-    import pprint
     with AWBWReplay(sys.argv[1]) as replay:
-
-        print("Press enter to step through the replay")
-        for action in replay.actions():
-            if action["action"] == "Fire":
-                pprint.pp(action)
-
-        action_types = replay.action_summaries()
-        print(f"The action types were {set(action_types)}")
+        action_types = list(replay.action_summaries())
+        print(f"There were {len(action_types)} actions. The action types were {set(action_types)}")
 
         print(" ".join(replay.action_summaries()))

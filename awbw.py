@@ -430,6 +430,7 @@ class AWBWGameState(game.GameState):
         new_global_info = self.game_info | {
             "active_player_id": int(info["nextPId"]),
             "turn": self.game_info["turn"] + 1,
+            "day": int(info["day"]),
         }
 
         # Player info
@@ -439,13 +440,9 @@ class AWBWGameState(game.GameState):
         p_id = info["nextPId"]
         for value in funds_info.values():
             if isinstance(value, int):
-                new_player_info[p_id] = self.players[p_id] | {"funds": value}
+                new_player_info[p_id] = new_player_info[p_id] | {"funds": value}
                 break
         new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
-
-        # Increment day by using the maximum turn count of all players
-        turn_counts = [p["turn_count"] for p in new_player_info.values()]
-        new_global_info["day"] = max(turn_counts)
 
         # Unit info
         # - TODO resupply
@@ -457,7 +454,9 @@ class AWBWGameState(game.GameState):
             assert isinstance(value, list)
             for unit in value:
                 u_id = int(unit["units_id"])
-                assert u_id in new_unit_info
+                if not u_id in new_unit_info:
+                    logging.warning("Unknown unit id %d in repair info", u_id)
+                    continue
                 new_unit_info[u_id] = new_unit_info[u_id] | {
                     "hit_points": unit["units_hit_points"]
                 }
@@ -573,9 +572,8 @@ class AWBWGameState(game.GameState):
         new_unit_info = deepcopy(self.units)
         transport_id = action_data["transportID"]
         unit = None
-        for p_id, value in action_data["unit"].items():
-            p_id = int(p_id)
-            if isinstance(value, dict) and value["units_players_id"] == p_id:
+        for value in action_data["unit"].values():
+            if isinstance(value, dict) and "units_x" in value and "units_y" in value:
                 unit = value
                 break
         assert unit is not None

@@ -53,4 +53,4 @@ class DefaultDict(collections.UserDict):
             if key not in self.ALLOWED_DATA:
                 raise KeyError(f"{key} is not supported for {self.__class__.__name__}")
 
-        super().__init__(self.ALLOWED_DATA | data)
+        super().__init__({**self.ALLOWED_DATA, **data})

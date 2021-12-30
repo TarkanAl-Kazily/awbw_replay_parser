@@ -21,9 +21,11 @@ with AWBWReplay("my_replay.zip") as replay:
     print(f"There are {len(replay_actions)} actions and {len(replay_turns)} turns in {replay.path()}")
 ```
 
-The `AWBWReplay` class is the parser and general wrapper around the replay archive, but is generally not used directly. Instead, we use the `game_info()` and `actions()` functions to get the necessary information to determine the game state between each action.
+The `AWBWReplay` class is the parser and general wrapper around the replay archive, but is generally not used directly.
+Instead, we use the `game_info()` and `actions()` functions to get the necessary information to determine the game state between each action.
 
-The `AWBWGameState` and `AWBWGameAction` classes take this information from the `AWBWReplay` instance and turn it into a consistent state format that can be analyzed over the course of a match. Here's an example for how to generate all game states in a replay:
+The `AWBWGameState` and `AWBWGameAction` classes take this information from the `AWBWReplay` instance and turn it into a consistent state format that can be analyzed over the course of a match.
+Here's an example for how to generate all game states in a replay:
 
 ```python
 from awbw_replay.replay import AWBWReplay
@@ -46,9 +48,10 @@ Extract game information from the replay by examining the game states. `AWBWGame
 - `buildings` : Building information given by building ID. Includes capture values and (x, y) coordinates
 - `game_map` (__PLANNED__): Map information including the map ID, map size and text representation of map
 
-All of this information is stored in various dictionary types given by the classes `awbw.GameInfo`, `awbw.Player`, `awbw.Unit` and `awbw.Building`. The `ALLOWED_DATA` dictionary of each of these classes provides the documentation for the present keys and expected types for parsing.
+All of this information is stored in various dictionary types given by the classes `awbw.GameInfo`, `awbw.Player`, `awbw.Unit` and `awbw.Building`.
+The `ALLOWED_DATA` dictionary of each of these classes provides the documentation for the present keys and expected types for parsing.
 
-This is an example of reading out players funds over the course of match
+Here's an example of reading out players funds over the course of match:
 
 ```python
 # Examine player funds over time

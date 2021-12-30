@@ -1,8 +1,6 @@
-# awbw.py
-#
-# Classes specific to AWBW
+"""Classes specific to AWBW Game States and Actions"""
 
-import pdb
+import pdb # pylint: disable=unused-import
 import logging
 from enum import Enum
 from copy import deepcopy
@@ -10,6 +8,7 @@ import typing
 import game
 
 class GameInfo(typing.TypedDict, total=False):
+    """Stores general information about the game"""
     games_id: int = 0
     active_player_id: int = 0
     maps_id: int = 0
@@ -17,6 +16,7 @@ class GameInfo(typing.TypedDict, total=False):
     day: int = 0
 
 class Player(typing.TypedDict, total=False):
+    """Stores per player information."""
     id: int = 0
     team: int = 0
     users_id: int = 0
@@ -31,6 +31,7 @@ class Player(typing.TypedDict, total=False):
     turn_count: int = 0
 
 class Unit(typing.TypedDict, total=False):
+    """Stores per unit information."""
     id: int = 0
     players_id: int = 0
     name: str = "Unit"
@@ -57,9 +58,11 @@ class Unit(typing.TypedDict, total=False):
     carried: bool = False
 
 class Building(typing.TypedDict, total=False):
+    """Stores per building information."""
     id: int = 0
     capture: int = 20
-    # Corresponds to a terrain type, which includes the information about which country owns the building
+    # Corresponds to a terrain type, which includes the information about which
+    # country owns the building.
     # TODO: Reverse lookup the terrain ID to determine which player owns the property
     # TODO: Reverse lookup the terrain ID to determine what type of property this is
     terrain_id: int = 0
@@ -76,19 +79,20 @@ class AWBWGameAction(game.GameAction):
     """
 
     class Type(Enum):
-        Fire = "Fire"
-        Join = "Join"
-        Resign = "Resign"
-        Move = "Move"
-        Build = "Build"
-        End = "End"
-        Power = "Power"
-        Capt = "Capt"
+        """Possible AWBW action types."""
+        FIRE = "Fire"
+        JOIN = "Join"
+        RESIGN = "Resign"
+        MOVE = "Move"
+        BUILD = "Build"
+        END = "End"
+        POWER = "Power"
+        CAPT = "Capt"
 
     def __init__(self, replay_action):
         super().__init__()
 
-        self.type = self.Type[replay_action["action"]]
+        self.type = self.Type(replay_action["action"])
         self.info = replay_action
 
 class AWBWGameState(game.GameState):
@@ -127,7 +131,7 @@ class AWBWGameState(game.GameState):
     def _construct_initial_players(self, replay_initial_players):
         """Helper for just the players info"""
         self.players = {}
-        for key, player in replay_initial_players.items():
+        for player in replay_initial_players.values():
             player_info = {
                 "turn_count": 0
             }
@@ -156,7 +160,7 @@ class AWBWGameState(game.GameState):
     def _construct_initial_units(self, replay_initial_units):
         """Helper for just the unit info"""
         self.units = {}
-        for key, unit in replay_initial_units.items():
+        for unit in replay_initial_units.values():
             unit_info = {}
             self.units[unit["id"]] = unit_info
             unit_keys_int = [
@@ -173,12 +177,14 @@ class AWBWGameState(game.GameState):
             unit_keys_str = ["name", "symbol", "movement_type"]
             for k in unit_keys_int:
                 unit_info[k] = int(unit[k])
+            for k in unit_keys_str:
+                unit_info[k] = unit[k]
             self.units[unit_info["id"]] = Unit(**unit_info)
 
     def _construct_initial_buildings(self, replay_initial_buildings):
         """Helper for just the building info"""
         self.buildings = {}
-        for i, building in replay_initial_buildings.items():
+        for building in replay_initial_buildings.values():
             building_info = {}
             building_keys_int = [
                     "id",
@@ -219,6 +225,7 @@ class AWBWGameState(game.GameState):
         # - position change
         move_state = deepcopy(self)
         if "Move" in action_data and isinstance(action_data["Move"], dict):
+            # pylint: disable=protected-access
             move_state = move_state._apply_move_action(action_data["Move"])
 
         fire_action = action_data["Fire"]
@@ -227,9 +234,10 @@ class AWBWGameState(game.GameState):
         # Player info
         # - power meters
         new_player_info = deepcopy(move_state.players)
-        for combatant, values in fire_action["copValues"].items():
+        for values in fire_action["copValues"].values():
             p_id = int(values["playerId"])
-            # For some reason, the replay data has the co power meter multiplied by a magnitude of 10
+            # For some reason, the replay data has the co power meter multiplied
+            # by a magnitude of 10.
             new_player_info[p_id]["co_power"] = int(values["copValue"]) / 10
 
         # Unit info
@@ -251,7 +259,6 @@ class AWBWGameState(game.GameState):
                         "ammo": unit["units_ammo"],
                         "fired": role == "attacker"
                 }
-        
         return AWBWGameState(
                 game_map=self.game_map,
                 players=new_player_info,
@@ -266,6 +273,7 @@ class AWBWGameState(game.GameState):
         logging.debug("Join action")
         # To join two units, one must be moved
         assert "Move" in action_data
+        # pylint: disable=protected-access
         move_state = self._apply_move_action(action_data["Move"])
 
         join_action = action_data["Join"]
@@ -316,7 +324,7 @@ class AWBWGameState(game.GameState):
                 buildings=move_state.buildings,
                 game_info=move_state.game_info)
 
-    def _apply_resign_action(self, action_data):
+    def _apply_resign_action(self, action_data): # pylint: disable=unused-argument
         """
         Helper for resign actions
         """
@@ -350,7 +358,7 @@ class AWBWGameState(game.GameState):
                 "moved": True,
                 "fuel": unit["units_fuel"]
             }
-        
+
         return AWBWGameState(
                 game_map=self.game_map,
                 players=self.players,
@@ -368,7 +376,7 @@ class AWBWGameState(game.GameState):
         # Unit info
         # - new unit
         built_unit = {}
-        for k, unit in info.items():
+        for unit in info.values():
             unit_keys_int = [
                     "id",
                     "players_id",
@@ -417,10 +425,10 @@ class AWBWGameState(game.GameState):
         # - funds change
         new_player_info = {}
         funds_info = info["nextFunds"]
-        for k, v in funds_info.items():
-            p_id = int(k)
-            if isinstance(v, int):
-                new_player_info[p_id] = self.players[p_id] | {"funds": v}
+        for key, value in funds_info.items():
+            p_id = int(key)
+            if isinstance(value, int):
+                new_player_info[p_id] = self.players[p_id] | {"funds": value}
             else:
                 new_player_info[p_id] = self.players[p_id]
         new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
@@ -435,13 +443,15 @@ class AWBWGameState(game.GameState):
         # - sank / crashed units
         new_unit_info = deepcopy(self.units)
         repaired_info = info["repaired"]
-        for k, v in repaired_info.items():
-            p_id = int(k)
-            assert isinstance(v, list)
-            for unit in v:
+        for key, value in repaired_info.items():
+            p_id = int(key)
+            assert isinstance(value, list)
+            for unit in value:
                 u_id = int(unit["units_id"])
                 assert u_id in new_unit_info
-                new_unit_info[u_id] = new_unit_info[u_id] | {"hit_points" : unit["units_hit_points"]}
+                new_unit_info[u_id] = new_unit_info[u_id] | {
+                    "hit_points": unit["units_hit_points"]
+                }
         # Unmark moved, captured, fired flags
         for u_id, unit in new_unit_info.items():
             unit["moved"] = False
@@ -455,7 +465,7 @@ class AWBWGameState(game.GameState):
                 buildings=self.buildings,
                 game_info=new_global_info)
 
-    def _apply_power_action(self, action_data):
+    def _apply_power_action(self, action_data): # pylint: disable=unused-argument
         """
         Helper for power actions
         """
@@ -481,6 +491,7 @@ class AWBWGameState(game.GameState):
         logging.debug("Capt action")
         move_state = self
         if "Move" in action_data and isinstance(action_data["Move"], dict):
+            # pylint: disable=protected-access
             move_state = move_state._apply_move_action(action_data["Move"])
         # Unit info
         # - position change
@@ -490,13 +501,13 @@ class AWBWGameState(game.GameState):
         # - capture status
         # - ownership status
         capt_action = action_data["Capt"]
-        buildingInfo = capt_action["buildingInfo"]
-        b_id = int(buildingInfo["buildings_id"])
+        building = capt_action["buildingInfo"]
+        b_id = int(building["buildings_id"])
         assert b_id in move_state.buildings
         new_building_info = deepcopy(move_state.buildings)
         new_building_info[b_id] = new_building_info[b_id] | {
-            "capture": buildingInfo["buildings_capture"],
-            "team": buildingInfo["buildings_team"],
+            "capture": building["buildings_capture"],
+            "team": building["buildings_team"],
         }
 
         return AWBWGameState(
@@ -507,67 +518,31 @@ class AWBWGameState(game.GameState):
                 game_info=move_state.game_info)
 
     _ACTION_TYPE_TO_APPLY_FUNC = {
-            AWBWGameAction.Type.Fire : _apply_fire_action,
-            AWBWGameAction.Type.Join : _apply_join_action,
-            AWBWGameAction.Type.Resign : _apply_resign_action,
-            AWBWGameAction.Type.Move : _apply_move_action,
-            AWBWGameAction.Type.Build : _apply_build_action,
-            AWBWGameAction.Type.End : _apply_end_action,
-            AWBWGameAction.Type.Power : _apply_power_action,
-            AWBWGameAction.Type.Capt : _apply_capt_action,
+            AWBWGameAction.Type.FIRE : _apply_fire_action,
+            AWBWGameAction.Type.JOIN : _apply_join_action,
+            AWBWGameAction.Type.RESIGN : _apply_resign_action,
+            AWBWGameAction.Type.MOVE : _apply_move_action,
+            AWBWGameAction.Type.BUILD : _apply_build_action,
+            AWBWGameAction.Type.END : _apply_end_action,
+            AWBWGameAction.Type.POWER : _apply_power_action,
+            AWBWGameAction.Type.CAPT : _apply_capt_action,
             }
 
     def apply_action(self, action):
         return self._ACTION_TYPE_TO_APPLY_FUNC[action.type](self, action.info)
 
-    def _unused_merge_info(self, action):
-        # TODO cleanup and delete
-        new_players = deepcopy(self.players)
-        # Overwrite all existing player info
-        for player_id, player in action.players().items():
-            assert player_id in new_players
-            for k, v in player.items():
-                new_players[player_id][k] = v
-
-        new_units = deepcopy(self.units)
-        # Overwrite all existing units
-        for unit_id, unit in new_units.items():
-            if unit_id in action.units():
-                new_units[unit_id] = unit | action.units()[unit_id]
-        # Add all new units
-        for unit_id, unit in action.units().items():
-            if not unit_id in new_units:
-                new_units[unit_id] = unit
-
-        new_buildings = deepcopy(self.buildings)
-        for building_id, building in action.buildings().items():
-            assert building_id in new_buildings
-            for k, v in building.items():
-                new_buildings[building_id][k] = v
-
-        new_game_info = deepcopy(self.game_info)
-        new_game_info = new_game_info | action.game_info()
-
-        return AWBWGameState(
-                game_info=new_game_info,
-                players=new_players,
-                units=new_units,
-                buildings=new_buildings)
-
 if __name__ == "__main__":
-    import sys, os, pprint
+    import sys
     from replay import AWBWReplay
     with AWBWReplay(sys.argv[1]) as replay:
         state = AWBWGameState(replay_initial=replay.game_info())
 
-        action_number = 0
         print("Press enter to step through the replay")
-        for action in replay.actions():
-            action = AWBWGameAction(replay_action=action)
-            state = state.apply_action(action)
-            for p, player in state.players.items():
-                print(f"{p}: G {player['funds']}")
-            action_number += 1
+        for _action in replay.actions():
+            _action = AWBWGameAction(replay_action=_action)
+            state = state.apply_action(_action)
+            for p, p_info in state.players.items():
+                print(f"{p}: G {p_info['funds']}")
 
         action_types = replay.action_summaries()
         print(f"The action types were {set(action_types)}")

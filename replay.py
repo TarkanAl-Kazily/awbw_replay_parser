@@ -1,25 +1,27 @@
-# replay.py
-#
-# Module for opening an awbw replay file
+"""Module for opening an AWBW replay file."""
 
-import sys
-import parse
-import typing
+import gzip
+import json
 import logging
 from pathlib import Path
+import sys
+import typing
 import zipfile
-import gzip
-import phpserialize
-import json
 
-# Replay files are .zip files, each of which are gzip compressed
-# Filenames are a{game_id} and {game_id}
-# a{game_id} file contains all the actions - csv style objects with JSON serialized contents for each turn
-# {game_id} file contains all the remaining metadata, including initial buildings and units
+import parse
+import phpserialize
+
+# Replay files are .zip files, each of which are gzip compressed.
+# Filenames are a{game_id} and {game_id}.
+# a{game_id} file contains all the actions as csv style objects with JSON serialized
+# contents for each turn.
+# {game_id} file contains all the remaining metadata, including the initial player funds,
+# initial buildings and units.
 
 class RawTurn(typing.NamedTuple):
     """
-    Contains all actions in a turn. The actual turn number is given by the placement in the action list.
+    Contains all actions in a turn. The actual turn number is given by the
+    placement in the action list.
     """
     playerId: int
     day: int
@@ -76,10 +78,11 @@ class AWBWReplay():
         self.filedata = []
 
         self._turns = None
+        self._game_data = None
         self._game = None
 
     def __enter__(self):
-        logging.debug(f"Opening {self._path}")
+        logging.debug("Opening %s", self._path)
         self.file = zipfile.ZipFile(self._path)
         self.namelist = self.file.namelist()
         for name in self.namelist:
@@ -93,7 +96,7 @@ class AWBWReplay():
 
         return self
 
-    def _parse_game(self, data):
+    def _parse_game(self, data): # pylint: disable=no-self-use
         """
         Arguments:
         - data: The decompressed contents of the (non-prefixed) {game_id} gzip file
@@ -108,11 +111,12 @@ class AWBWReplay():
         result = []
         for line in data.decode().strip().split("\n"):
             parsed = parse.parse(self._ACTION_PARSE_STR, line).named
-            phpobj = phpserialize.loads(bytes(parsed["phpobj"], encoding="utf-8"), decode_strings=True)
+            phpobj = phpserialize.loads(
+                    bytes(parsed["phpobj"], encoding="utf-8"),
+                    decode_strings=True)
             phpactions = phpobj[2]
             actions = []
-            for key in range(len(phpactions)):
-                jsonstr = phpactions[key]
+            for jsonstr in phpactions.values():
                 actions.append(json.loads(jsonstr))
             result.append(RawTurn(playerId=parsed["playerId"], day=parsed["day"], actions=actions))
 
@@ -121,28 +125,27 @@ class AWBWReplay():
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.file.close()
 
+    def path(self):
+        """Returns the filepath of the replay."""
+        return self._path
+
     def game_info(self):
+        """Returns the initial game info dictionary."""
         return self._game
 
     def turns(self):
-        """
-        Iterate over every turn in the game.
-        """
+        """Returns the list of turns in the game."""
         return self._turns
 
     def actions(self):
-        """
-        Iterate over every action in the game.
-        """
-        for t in self.turns():
-            yield from t.actions
+        """Generator over every action in the game."""
+        for _turn in self.turns():
+            yield from _turn.actions
 
     def action_summaries(self):
-        """
-        Return just the action type.
-        """
-        for action in self.actions():
-            yield action["action"]
+        """Generator over every action type in the game."""
+        for _action in self.actions():
+            yield _action["action"]
 
 # Basic test code for opening a replay file
 if __name__ == "__main__":
@@ -151,7 +154,7 @@ if __name__ == "__main__":
 
         print("Press enter to step through the replay")
         for action in replay.actions():
-            if (action["action"] == "Fire"):
+            if action["action"] == "Fire":
                 pprint.pp(action)
 
         action_types = replay.action_summaries()

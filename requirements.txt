@@ -1,0 +1,4 @@
+matplotlib==3.5.1
+numpy==1.21.4
+parse==1.19.0
+phpserialize==1.3

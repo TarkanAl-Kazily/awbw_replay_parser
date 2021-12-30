@@ -12,6 +12,6 @@ Issues and Pull Requests will be engaged with as the maintainers have time avail
 
 This repository is configured with some basic Github Actions which will automatically run Pylint and Python's built in `unittest` module. All pull requests must have these jobs pass before being merged.
 
-When making a pull request fixing a bug, please add a unit test to verify the bug doesn't regress with your pull request. Example replay data can be checked in to the `replays` directory. However, it is preferred to use an external file hosting solution (like Google Drive) to store these replay archives to keep the overal repository size small.
+When making a pull request fixing a bug, please add a unit test to verify the bug doesn't regress again after your pull request. Example replay data can be checked in to the `replays` directory. However, it is preferred to use an external file hosting solution (like Google Drive) to store these replay archives to keep the overal repository size small.
 
 A good unit test will verify that the given feature or replay file is loaded properly, and ideally will test some known facts about the replay file loaded - it's game ID, the players involved, the number of turns or the winner. Most important, the test should be kept short and to the point, focused on the bug or feature being tested.

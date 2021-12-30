@@ -43,5 +43,17 @@ class TestAWBWGameState(unittest.TestCase):
             assert len(replay.turns()) == states[-1].game_info["turn"] + 1
             assert all((len(state.players) == 2 for state in states))
 
+    def test_standard_replay(self):
+        """Test a non Fog replay."""
+        example_replay = os.path.join(TEST_REPLAYS_DIR, "standard_replay.zip")
+        with AWBWReplay(example_replay) as replay:
+            states = [AWBWGameState(replay_initial=replay.game_info())]
+
+            for action in replay.actions():
+                states.append(states[-1].apply_action(AWBWGameAction(action)))
+
+            assert len(replay.turns()) == states[-1].game_info["turn"] + 1
+            assert all((len(state.players) == 2 for state in states))
+
 if __name__ == "__main__":
     unittest.main()

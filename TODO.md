@@ -17,19 +17,24 @@
   - Also added unit tests!
 - [X] P0: Use matplotlib to plot numbers from game state over time (actions)
 - [X] P0: Support tracking which day it is
+- [X] P1: Add a contribution guide
 
 # Up next
 
 - [ ] P1: Continue adding support for more action types
-  - Buildings
+  - Resign
+  - Powers
+  - Load / Unload
+  - Launch
 - [ ] P1: Add helper functions to go right from a game ID to a game analysis (by downloading the replay directly from awbw)
-- [ ] P1: Add a contribution guide
 - [ ] P1: Create a google collab / github interactive notebook for anyone to enter a replay ID and use Python to inspect state over time
   - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
-  - Find a workaround for Pyton 3.8 not being supported (typing.TypedDict)
+  - Find a workaround for Python 3.8 not being supported (typing.TypedDict)
 
 # Low-Pri ideas
 
+- [ ] P1: Add batch testing for multiple replay files
+- [ ] P1: Pull replay files from an external file hosting solution (GDrive)
 - [ ] P1: Open a map (.txt) as input. Get out a picture of the terrain.
 - [ ] P1: From a map id, download the text format for the terrain automatically.
 - [ ] P1: From a map id, create a matplotlib image with map assets pulled from awbw.

@@ -23,6 +23,10 @@
 # Up next
 
 - [ ] P0: Update the README with common actions / workflows
+- [ ] P0: Expand main.py to output a summary of all the tested replay files.
+  - CSV format
+  - Include the exception replay parsing failed on, if any
+  - P1: Find a way to tell if any warnings were logged during the replay (usually indicates a bad replay)
 - [ ] P1: Continue adding support for more action types
   - Resign
   - Powers

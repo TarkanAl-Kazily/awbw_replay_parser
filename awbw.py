@@ -4,72 +4,85 @@ import pdb # pylint: disable=unused-import
 import logging
 from enum import Enum
 from copy import deepcopy
-import typing
+
 import game
 
-class GameInfo(typing.TypedDict, total=False):
+class GameInfo(game.DefaultDict):
     """Stores general information about the game"""
-    games_id: int = 0
-    active_player_id: int = 0
-    maps_id: int = 0
-    turn: int = 0
-    day: int = 0
 
-class Player(typing.TypedDict, total=False):
+    ALLOWED_DATA = {
+        "games_id": 0,
+        "active_player_id": 0,
+        "maps_id": 0,
+        "turn": 0,
+        "day": 0,
+    }
+
+class Player(game.DefaultDict):
     """Stores per player information."""
-    id: int = 0
-    team: int = 0
-    users_id: int = 0
-    countries_id: int = 0
-    co_id: int = 0
-    co_max_power: int = 0
-    co_max_spower: int = 0
-    co_power: int = 0
-    co_power_on: bool = False
-    eliminated: bool = False
-    funds: int = 0
-    turn_count: int = 0
 
-class Unit(typing.TypedDict, total=False):
+    ALLOWED_DATA = {
+        "id": 0,
+        "team": 0,
+        "users_id": 0,
+        "countries_id": 0,
+        "co_id": 0,
+        "co_max_power": 0,
+        "co_max_spower": 0,
+        "co_power": 0,
+        "co_power_on": False,
+        "eliminated": False,
+        "funds": 0,
+        "turn_count": 0,
+    }
+
+class Unit(game.DefaultDict):
     """Stores per unit information."""
-    id: int = 0
-    players_id: int = 0
-    name: str = "Unit"
-    movement_points: int = 0
-    vision: int = 0
-    fuel: int = 0
-    fuel_per_turn: int = 0
-    sub_dive: bool = False
-    ammo: int = 0
-    short_range: int = 0
-    long_range: int = 0
-    second_weapon: bool = False
-    symbol: str = "U"
-    cost: int = 0
-    movement_type: str = "F"
-    x: int = 0
-    y: int = 0
-    moved: bool = False
-    capture: bool = False
-    fired: bool = False
-    hit_points: int = 10
-    cargo1_units_id: int = 0
-    cargo2_units_id: int = 0
-    carried: bool = False
 
-class Building(typing.TypedDict, total=False):
+    ALLOWED_DATA = {
+        "id": 0,
+        "players_id": 0,
+        "name": "Unit",
+        "movement_points": 0,
+        "vision": 0,
+        "fuel": 0,
+        "fuel_per_turn": 0,
+        "sub_dive": False,
+        "ammo": 0,
+        "short_range": 0,
+        "long_range": 0,
+        "second_weapon": False,
+        "symbol": "U",
+        "cost": 0,
+        "movement_type": "F",
+        "x": 0,
+        "y": 0,
+        "moved": False,
+        "capture": False,
+        "fired": False,
+        "hit_points": 10,
+        "cargo1_units_id": 0,
+        "cargo2_units_id": 0,
+        "carried": False,
+    }
+
+class Building(game.DefaultDict):
     """Stores per building information."""
-    id: int = 0
-    capture: int = 20
-    # Corresponds to a terrain type, which includes the information about which
-    # country owns the building.
-    # TODO: Reverse lookup the terrain ID to determine which player owns the property
-    # TODO: Reverse lookup the terrain ID to determine what type of property this is
-    terrain_id: int = 0
-    x: int = 0
-    y: int = 0
-    # Same as player id
-    team: int = 0
+
+    ALLOWED_DATA = {
+        "id": 0,
+        "last_capture": 20,
+        "capture": 20,
+        # Corresponds to a terrain type, which includes the information about which
+        # country owns the building.
+        # TODO": Reverse lookup the terrain ID to determine which player owns the property
+        # TODO": Reverse lookup the terrain ID to determine what type of property this is
+        "terrain_id": 0,
+        "x": 0,
+        "y": 0,
+        # Same as player id
+        "team": 0,
+    }
 
 # Derived classes for AWBW
 

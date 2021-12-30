@@ -103,6 +103,7 @@ class AWBWGameAction(game.GameAction):
         LOAD = "Load"
         UNLOAD = "Unload"
         REPAIR = "Repair"
+        SUPPLY = "Supply"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -567,6 +568,29 @@ class AWBWGameState(game.GameState):
                 buildings=move_state.buildings,
                 game_info=move_state.game_info)
 
+    def _apply_supply_action(self, action_data):
+        """
+        Helper for supply actions
+        """
+        logging.debug("Supply action")
+        move_state = self
+        if "Move" in action_data and isinstance(action_data["Move"], dict):
+            move_state = self._apply_move_action(action_data["Move"])
+
+        # No funds change on supply.
+
+        # Unit info
+        # - fuel change
+        # The supply data doesn't actually include the new fuel values,
+        # so for now we'll only handle the move part.
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=move_state.units,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
     def _apply_load_action(self, action_data):
         """
         Helper for load actions
@@ -664,6 +688,7 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.LOAD : _apply_load_action,
             AWBWGameAction.Type.UNLOAD : _apply_unload_action,
             AWBWGameAction.Type.REPAIR : _apply_repair_action,
+            AWBWGameAction.Type.SUPPLY : _apply_supply_action,
             }
 
     def apply_action(self, action):

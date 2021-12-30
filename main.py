@@ -54,7 +54,6 @@ def test_replay(replay, show_plot=True):
     for i, p_id in enumerate(states[-1].players.keys()):
         players[p_id] = {"name": PLAYER_NAMES[i], "funds": []}
 
-    import pdb
     # Generate all the states
     for action in replay.actions():
         action = AWBWGameAction(replay_action=action)

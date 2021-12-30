@@ -4,7 +4,7 @@ import logging
 from enum import Enum
 from copy import deepcopy
 
-import game
+from awbw_replay import game
 
 class GameInfo(game.DefaultDict):
     """Stores general information about the game"""
@@ -723,7 +723,7 @@ class AWBWGameState(game.GameState):
 
 if __name__ == "__main__":
     import sys
-    from replay import AWBWReplay
+    from awbw_replay.replay import AWBWReplay
     with AWBWReplay(sys.argv[1]) as replay:
         state = AWBWGameState(replay_initial=replay.game_info())
 

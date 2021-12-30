@@ -7,8 +7,8 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-from awbw import AWBWGameAction, AWBWGameState
-from replay import AWBWReplay
+from awbw_replay.awbw import AWBWGameAction, AWBWGameState
+from awbw_replay.replay import AWBWReplay
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1

@@ -5,12 +5,11 @@ To run:
 python -m unittest -v
 """
 
-
 import os
 import unittest
 import tempfile
 
-from replay import AWBWReplay
+from awbw_replay.replay import AWBWReplay
 
 # pylint: disable=no-self-use
 

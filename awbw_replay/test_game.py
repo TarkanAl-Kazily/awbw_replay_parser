@@ -7,7 +7,7 @@ python -m unittest -v
 
 import unittest
 
-from game import DefaultDict
+from .game import DefaultDict
 
 # pylint: disable=no-self-use
 

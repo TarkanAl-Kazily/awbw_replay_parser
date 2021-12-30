@@ -1,8 +1,9 @@
 """Initialize the awbw_replay package"""
-from setuptools import setup
+from distutils.core import setup
 import os.path
 
-README = os.path.join(os.path.dirname(__file__), "README.md")
+BASE_DIR = os.path.dirname(__file__)
+README = os.path.join(BASE_DIR, "README.md")
 
 setup(
     # Needed to silence warnings (and to be a worthwhile package)

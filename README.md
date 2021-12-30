@@ -25,6 +25,7 @@ The `AWBWReplay` class is the parser and general wrapper around the replay archi
 Instead, we use the `game_info()` and `actions()` functions to get the necessary information to determine the game state between each action.
 
 The `AWBWGameState` and `AWBWGameAction` classes take this information from the `AWBWReplay` instance and turn it into a consistent state format that can be analyzed over the course of a match.
+Generate the initial state from the `replay.game_info()`, then generate each successive state using the previous state's `apply_action()` method.
 Here's an example for how to generate all game states in a replay:
 
 ```python

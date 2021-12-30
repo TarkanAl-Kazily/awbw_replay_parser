@@ -66,7 +66,7 @@ class AWBWReplay():
 
     _ACTION_PARSE_STR = "p:{playerId:d};d:{day:d};a:{phpobj}"
 
-    def __init__(self, file: str | Path):
+    def __init__(self, file):
         """
         Arguments:
         - file: str or Path object to open read-only to extract the replay.

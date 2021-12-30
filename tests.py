@@ -11,7 +11,7 @@ import unittest
 import tempfile
 
 from replay import AWBWReplay
-#from awbw import AWBWGameAction, AWBWGameState
+from awbw import AWBWGameAction, AWBWGameState
 
 # pylint: disable=no-self-use
 
@@ -38,6 +38,33 @@ class TestAWBWReplay(unittest.TestCase):
             with AWBWReplay(dne_file) as _replay:
                 # We don't expect to get here
                 pass
+
+class TestAWBWGameState(unittest.TestCase):
+    """Tests for the AWBWGame* classes"""
+
+    def test_short_replay(self):
+        """Test a basic short replay."""
+        example_replay = os.path.join(TEST_REPLAYS_DIR, "short_replay.zip")
+        with AWBWReplay(example_replay) as replay:
+            states = [AWBWGameState(replay_initial=replay.game_info())]
+
+            for action in replay.actions():
+                states.append(states[-1].apply_action(AWBWGameAction(action)))
+
+            assert len(replay.turns()) == states[-1].game_info["turn"] + 1
+            assert all((len(state.players) == 2 for state in states))
+
+    def test_basic_replay(self):
+        """Test a medium length replay."""
+        example_replay = os.path.join(TEST_REPLAYS_DIR, "basic_replay.zip")
+        with AWBWReplay(example_replay) as replay:
+            states = [AWBWGameState(replay_initial=replay.game_info())]
+
+            for action in replay.actions():
+                states.append(states[-1].apply_action(AWBWGameAction(action)))
+
+            assert len(replay.turns()) == states[-1].game_info["turn"] + 1
+            assert all((len(state.players) == 2 for state in states))
 
 if __name__ == "__main__":
     unittest.main()

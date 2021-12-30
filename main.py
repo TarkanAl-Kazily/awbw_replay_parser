@@ -54,9 +54,16 @@ def test_replay(replay, show_plot=True):
     for i, p_id in enumerate(states[-1].players.keys()):
         players[p_id] = {"name": PLAYER_NAMES[i], "funds": []}
 
+    import pdb
     # Generate all the states
     for action in replay.actions():
         action = AWBWGameAction(replay_action=action)
+        message = [
+            f"turn: {states[-1].game_info['turn']}",
+            f"action_number: {len(states)}",
+            f"action_type: {action.type}",
+        ]
+        logging.debug(" ".join(message))
         states.append(states[-1].apply_action(action))
 
     # For each state, get the day. If it's the last state of the day, track both player's stats

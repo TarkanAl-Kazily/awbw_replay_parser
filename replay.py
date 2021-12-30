@@ -175,7 +175,7 @@ def find_in(collection, obj):
     elif isinstance(collection, str):
         if str(obj) in collection:
             result.append(collection)
-    
+
     else:
         if obj == collection:
             result.append(collection)

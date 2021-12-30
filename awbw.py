@@ -102,6 +102,7 @@ class AWBWGameAction(game.GameAction):
         CAPT = "Capt"
         LOAD = "Load"
         UNLOAD = "Unload"
+        REPAIR = "Repair"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -411,6 +412,8 @@ class AWBWGameState(game.GameState):
         # - funds change
         new_player_info = deepcopy(self.players)
         p_id = built_unit["players_id"]
+        if not p_id == self.game_info["active_player_id"]:
+            logging.warning("Build action for non-active player %d", p_id)
         new_player_info[p_id]["funds"] -= built_unit["cost"]
 
         return AWBWGameState(
@@ -427,7 +430,7 @@ class AWBWGameState(game.GameState):
         logging.debug("End action")
         info = action_data["updatedInfo"]
         # GameInfo Info - new active player
-        new_global_info = self.game_info | {
+        new_global_info = deepcopy(self.game_info) | {
             "active_player_id": int(info["nextPId"]),
             "turn": self.game_info["turn"] + 1,
             "day": int(info["day"]),
@@ -454,7 +457,7 @@ class AWBWGameState(game.GameState):
             assert isinstance(value, list)
             for unit in value:
                 u_id = int(unit["units_id"])
-                if not u_id in new_unit_info:
+                if u_id not in new_unit_info:
                     logging.warning("Unknown unit id %d in repair info", u_id)
                     continue
                 new_unit_info[u_id] = new_unit_info[u_id] | {
@@ -522,6 +525,46 @@ class AWBWGameState(game.GameState):
                 players=move_state.players,
                 units=move_state.units,
                 buildings=new_building_info,
+                game_info=move_state.game_info)
+
+    def _apply_repair_action(self, action_data):
+        """
+        Helper for repair actions
+        """
+        logging.debug("Repair action")
+        move_state = self
+        if "Move" in action_data and isinstance(action_data["Move"], dict):
+            move_state = self._apply_move_action(action_data["Move"])
+        # Unit info
+        # - fuel change
+        # - hitpoint change
+        new_unit_info = deepcopy(move_state.units)
+
+        repair_info = action_data["Repair"]
+        p_id = None
+        for value in repair_info["repaired"].values():
+            if isinstance(value, dict):
+                new_unit_info[value["units_id"]]["hit_points"] = value["units_hit_points"]
+                p_id = new_unit_info[value["units_id"]]["players_id"]
+                break
+        assert p_id is not None
+
+        # Player info
+        # - funds change
+        new_player_info = deepcopy(move_state.players)
+        assert p_id in new_player_info
+        funds = None
+        for value in repair_info["funds"].values():
+            if isinstance(value, int):
+                funds = value
+                break
+        new_player_info[p_id]["funds"] = funds
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=new_player_info,
+                units=new_unit_info,
+                buildings=move_state.buildings,
                 game_info=move_state.game_info)
 
     def _apply_load_action(self, action_data):
@@ -620,6 +663,7 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.CAPT : _apply_capt_action,
             AWBWGameAction.Type.LOAD : _apply_load_action,
             AWBWGameAction.Type.UNLOAD : _apply_unload_action,
+            AWBWGameAction.Type.REPAIR : _apply_repair_action,
             }
 
     def apply_action(self, action):

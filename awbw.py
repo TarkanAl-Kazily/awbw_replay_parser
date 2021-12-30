@@ -292,8 +292,7 @@ class AWBWGameState(game.GameState):
         join_action = action_data["Join"]
         # The unit that now has 0 health due to joining
         joined_u_id = None
-        for p_id, u_id in join_action["joinID"].items():
-            p_id = int(p_id)
+        for u_id in join_action["joinID"].values():
             if isinstance(u_id, int):
                 joined_u_id = u_id
                 break

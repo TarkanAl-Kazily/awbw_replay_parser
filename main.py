@@ -5,6 +5,7 @@ import logging
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
+import gzip
 
 from awbw import AWBWGameAction, AWBWGameState
 from replay import AWBWReplay
@@ -105,8 +106,12 @@ def main(args):
 
         for filename in replay_files:
             logging.info("Opening %s", filename)
-            with AWBWReplay(filename) as replay:
-                test_replay(replay, show_plot=False)
+            try:
+                with AWBWReplay(filename) as replay:
+                    test_replay(replay, show_plot=False)
+            except gzip.BadGzipFile as e:
+                logging.error("Could not open replay %s: %s", filename, e)
+                continue
 
     return EXIT_SUCCESS
 

@@ -26,7 +26,6 @@
   - Powers
   - Load / Unload
   - Launch
-- [ ] P1: Add helper functions to go right from a game ID to a game analysis (by downloading the replay directly from awbw)
 - [ ] P1: Create a google collab / github interactive notebook for anyone to enter a replay ID and use Python to inspect state over time
   - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
   - Find a workaround for Python 3.8 not being supported (typing.TypedDict)
@@ -38,5 +37,6 @@
 - [ ] P1: Open a map (.txt) as input. Get out a picture of the terrain.
 - [ ] P1: From a map id, download the text format for the terrain automatically.
 - [ ] P1: From a map id, create a matplotlib image with map assets pulled from awbw.
+- [ ] P1: Add helper functions to go right from a game ID to a game analysis (by downloading the replay directly from awbw)
 - [ ] P2: Crawl the AWBW completed games page to get all the game IDs with replays available.
   - We can't download replays without login credentials...

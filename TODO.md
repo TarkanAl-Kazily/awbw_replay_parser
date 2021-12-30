@@ -23,10 +23,10 @@
   - https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb#scrollTo=8J3NBxtZpPcK
   - Find a workaround for Python 3.8 not being supported (typing.TypedDict)
 - [X] P0: Update the README with common actions / workflows
+- [X] P0: Update the colab - Add some questions to the Google colab file for auto-analysis
 
 # Up next
 
-- [ ] P0: Update the colab - Add some questions to the Google colab file for auto-analysis
 - [ ] P0: Expand main.py to output a summary of all the tested replay files.
   - CSV format
   - Include the exception replay parsing failed on, if any

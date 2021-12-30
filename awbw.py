@@ -274,7 +274,7 @@ class AWBWGameState(game.GameState):
                     "fired": role == "attacker",
                 }
                 new_unit_info[u_id] = {
-                    **new_unit_info[u_id], 
+                    **new_unit_info[u_id],
                     **updated_unit_data,
                 }
         return AWBWGameState(

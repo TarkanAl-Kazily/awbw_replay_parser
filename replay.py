@@ -3,7 +3,6 @@
 import gzip
 import json
 import logging
-from pathlib import Path
 import sys
 import typing
 import zipfile

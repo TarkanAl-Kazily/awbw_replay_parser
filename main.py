@@ -1,11 +1,11 @@
 """Main CLI tool to use the AWBW Replay Parser libraries"""
 
 import argparse
+import gzip
 import logging
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
-import gzip
 
 from awbw import AWBWGameAction, AWBWGameState
 from replay import AWBWReplay

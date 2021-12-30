@@ -301,23 +301,24 @@ class AWBWGameState(game.GameState):
         new_unit_info = deepcopy(move_state.units)
         # Set hit points of old unit to 0 to indicate it no longer exists
         new_unit_info[joined_u_id]["hit_points"] = 0
+        p_id = new_unit_info[joined_u_id]["players_id"]
 
         # Player info
         # - funds change
         new_player_info = deepcopy(move_state.players)
-        for p_id, funds in join_action["newFunds"].items():
-            p_id = int(p_id)
-            new_player_info[p_id]["funds"] = funds
+        for funds in join_action["newFunds"].values():
+            if isinstance(funds, int):
+                new_player_info[p_id]["funds"] = funds
+                break
 
         # Unit info
         # - ammo change
         # - health change
         unit_info = join_action["unit"]
-        for p_id, unit in unit_info.items():
-            p_id = int(p_id)
+        for unit in unit_info.values():
             if not isinstance(unit, dict):
                 continue
-            if not unit["units_players_id"] == p_id:
+            if "units_x" not in unit or "units_y" not in unit:
                 # Not the unit that moved, just another player's view of the unit.
                 # Because it's another player's view, it won't have the full unit info
                 # in the case where the unit moves back into the fog.
@@ -362,7 +363,29 @@ class AWBWGameState(game.GameState):
                 # in the case where the unit moves back into the fog.
                 continue
             u_id = unit["units_id"]
-            assert u_id in new_unit_info
+            if u_id not in new_unit_info:
+                logging.warning("Unknown unit id %d in move info", u_id)
+                logging.debug("Creating new unit %d from move info", u_id)
+                unit_info = {}
+                unit_keys_int = [
+                        "id",
+                        "players_id",
+                        "fuel",
+                        "fuel_per_turn",
+                        "ammo",
+                        "cost",
+                        "x",
+                        "y",
+                        "hit_points"
+                ]
+                prefix = "units_"
+                unit_keys_str = ["name", "symbol", "movement_type"]
+                for k in unit_keys_int:
+                    unit_info[k] = int(unit[prefix + k])
+                for k in unit_keys_str:
+                    unit_info[k] = unit[prefix + k]
+                new_unit_info[u_id] = Unit(**unit_info)
+
             new_unit_info[u_id] = new_unit_info[u_id] | {
                 "x" : unit["units_x"],
                 "y": unit["units_y"],

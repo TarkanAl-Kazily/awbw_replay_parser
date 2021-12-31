@@ -105,6 +105,7 @@ class AWBWGameAction(game.GameAction):
         UNLOAD = "Unload"
         REPAIR = "Repair"
         SUPPLY = "Supply"
+        DELETE = "Delete"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -719,6 +720,25 @@ class AWBWGameState(game.GameState):
                 buildings=self.buildings,
                 game_info=self.game_info)
 
+    def _apply_delete_action(self, action_data):
+        """
+        Helper for delete actions
+        """
+        logging.debug("Delete action")
+
+        new_unit_info = deepcopy(self.units)
+        for u_id in action_data["Delete"]["unitId"].values():
+            if isinstance(u_id, int):
+                # Set the unit's hp to zero to treat it as deleted
+                new_unit_info[u_id]["hit_points"] = 0
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=self.players,
+                units=new_unit_info,
+                buildings=self.buildings,
+                game_info=self.game_info)
+
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.FIRE : _apply_fire_action,
             AWBWGameAction.Type.JOIN : _apply_join_action,
@@ -732,6 +752,7 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.UNLOAD : _apply_unload_action,
             AWBWGameAction.Type.REPAIR : _apply_repair_action,
             AWBWGameAction.Type.SUPPLY : _apply_supply_action,
+            AWBWGameAction.Type.DELETE : _apply_delete_action,
             }
 
     def apply_action(self, action):

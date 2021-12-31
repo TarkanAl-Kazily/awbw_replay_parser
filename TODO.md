@@ -32,10 +32,8 @@
   - Include the exception replay parsing failed on, if any
   - P1: Find a way to tell if any warnings were logged during the replay (usually indicates a bad replay)
 - [ ] P1: Continue adding support for more action types
-  - Resign
   - Powers
   - Launch
-  - Hide / Reveal / Dive / Rise ?
 
 # Low-Pri ideas
 

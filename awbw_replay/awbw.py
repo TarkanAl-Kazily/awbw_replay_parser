@@ -15,6 +15,7 @@ class GameInfo(game.DefaultDict):
         "maps_id": 0,
         "turn": 0,
         "day": 0,
+        "game_over": False,
     }
 
 class Player(game.DefaultDict):
@@ -22,7 +23,7 @@ class Player(game.DefaultDict):
 
     ALLOWED_DATA = {
         "id": 0,
-        "team": 0,
+        "team": "",
         "users_id": 0,
         "countries_id": 0,
         "co_id": 0,
@@ -30,9 +31,9 @@ class Player(game.DefaultDict):
         "co_max_spower": 0,
         "co_power": 0,
         "co_power_on": False,
+        "super_co_power_on": False,
         "eliminated": False,
         "funds": 0,
-        "turn_count": 0,
     }
 
 class Unit(game.DefaultDict):
@@ -79,8 +80,9 @@ class Building(game.DefaultDict):
         "terrain_id": 0,
         "x": 0,
         "y": 0,
-        # Same as player id
-        "team": 0,
+        "players_id": 0,
+        # Only used in team battles
+        "team": "",
     }
 
 # Derived classes for AWBW
@@ -104,6 +106,9 @@ class AWBWGameAction(game.GameAction):
         UNLOAD = "Unload"
         REPAIR = "Repair"
         SUPPLY = "Supply"
+        DELETE = "Delete"
+        HIDE = "Hide"
+        UNHIDE = "Unhide"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -147,9 +152,9 @@ class AWBWGameState(game.GameState):
     def _construct_initial_players(self, replay_initial_players):
         """Helper for just the players info"""
         self.players = {}
+        is_team = False
         for player in replay_initial_players.values():
             player_info = {
-                "turn_count": 0
             }
             player_keys_int = [
                     "id",
@@ -160,7 +165,6 @@ class AWBWGameState(game.GameState):
                     "co_max_power",
                     "co_max_spower",
                     "co_power",
-                    "team"
             ]
             for k in player_keys_int:
                 player_info[k] = int(player[k])
@@ -168,10 +172,14 @@ class AWBWGameState(game.GameState):
             player_keys_bool = ["co_power_on", "eliminated"]
             for k in player_keys_bool:
                 player_info[k] = (player[k] == "Y")
-
+            player_info["team"] = player["team"]
+            if "A" in player_info["team"] or "B" in player_info["team"]:
+                is_team = True
             self.players[player_info["id"]] = Player(**player_info)
-        first_player = replay_initial_players[0]
-        self.players[int(first_player["id"])]["turn_count"] = 1
+
+        # TODO: Support team battles
+        if is_team:
+            logging.warning("Team battles not supported")
 
     def _construct_initial_units(self, replay_initial_units):
         """Helper for just the unit info"""
@@ -255,6 +263,9 @@ class AWBWGameState(game.GameState):
             # by a magnitude of 10.
             new_player_info[p_id]["co_power"] = int(values["copValue"]) / 10
 
+        # Handle funds change in the case of Sasha's power
+        gained_funds = {}
+
         # Unit info
         # - ammo change
         # - health change
@@ -262,21 +273,33 @@ class AWBWGameState(game.GameState):
         for combatinfo in fire_action["combatInfoVision"].values():
             if not isinstance(combatinfo, dict) or not isinstance(combatinfo["combatInfo"], dict):
                 continue
-            for role, unit in combatinfo["combatInfo"].items():
-                if not isinstance(unit, dict):
-                    # Indicates a unseen attacker
-                    continue
-                u_id = int(unit["units_id"])
-                assert u_id in new_unit_info
-                updated_unit_data = {
-                    "hit_points": unit["units_hit_points"],
-                    "ammo": unit["units_ammo"],
-                    "fired": role == "attacker",
-                }
-                new_unit_info[u_id] = {
-                    **new_unit_info[u_id],
-                    **updated_unit_data,
-                }
+            for role in ["attacker", "defender"]:
+                if role in combatinfo["combatInfo"]:
+                    unit = combatinfo["combatInfo"][role]
+                    if not isinstance(unit, dict):
+                        # Indicates a unseen attacker
+                        continue
+                    u_id = int(unit["units_id"])
+                    assert u_id in new_unit_info
+                    updated_unit_data = {
+                        "hit_points": unit["units_hit_points"],
+                        "ammo": unit["units_ammo"],
+                        "fired": role == "attacker",
+                    }
+                    new_unit_info[u_id] = {
+                        **new_unit_info[u_id],
+                        **updated_unit_data,
+                    }
+            if "gainedFunds" in combatinfo["combatInfo"]:
+                fundsinfo = combatinfo["combatInfo"]["gainedFunds"]
+                for p_id, funds in fundsinfo.items():
+                    p_id = int(p_id)
+                    if funds is not None:
+                        gained_funds[p_id] = funds
+
+        for p_id, funds in gained_funds.items():
+            new_player_info[p_id]["funds"] += funds
+
         return AWBWGameState(
                 game_map=self.game_map,
                 players=new_player_info,
@@ -341,13 +364,28 @@ class AWBWGameState(game.GameState):
                 buildings=move_state.buildings,
                 game_info=move_state.game_info)
 
-    def _apply_resign_action(self, action_data): # pylint: disable=unused-argument
+    def _apply_resign_action(self, action_data):
         """
         Helper for resign actions
         """
-        print("Resign action")
-        print("IMPLEMENT ME")
-        return deepcopy(self)
+        logging.debug("Resign action")
+        new_game_info = self.game_info
+        if "GameOver" in action_data:
+            new_game_info = deepcopy(self.game_info)
+            new_game_info["game_over"] = True
+
+        new_player_info = deepcopy(self.players)
+        p_id = action_data["Resign"]["playerId"]
+        new_player_info[p_id]["eliminated"] = True
+
+        # TODO: The GameOver / Resign messages actual contain usernames.
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=new_player_info,
+                units=self.units,
+                buildings=self.buildings,
+                game_info=new_game_info)
 
     def _apply_move_action(self, action_data):
         """
@@ -416,25 +454,44 @@ class AWBWGameState(game.GameState):
         # - new unit
         built_unit = {}
         new_unit_info = deepcopy(self.units)
-        for unit in info.values():
-            unit_keys_int = [
-                    "id",
-                    "players_id",
-                    "fuel",
-                    "fuel_per_turn",
-                    "ammo",
-                    "cost",
-                    "x",
-                    "y",
-                    "hit_points"
-            ]
-            prefix = "units_"
-            unit_keys_str = ["name", "symbol", "movement_type"]
-            for k in unit_keys_int:
-                built_unit[k] = int(unit[prefix + k])
-            for k in unit_keys_str:
-                built_unit[k] = unit[prefix + k]
-            new_unit_info[built_unit["id"]] = Unit(**built_unit)
+        unit_info = None
+
+        # Figure out what information is the true info for the unit
+        if "global" in info and len(info) == 1:
+            # This is a normal standard match, where the unit is not Sonja's
+            unit_info = info["global"]
+        else:
+            # This unit has special vision information (FOG or Sonja's unit)
+            for p_id, unit in info.items():
+                if p_id == "global":
+                    continue
+                p_id = int(p_id)
+                # Only pick the unit that has full information
+                # (since a player always has full view of their units)
+                if unit["units_players_id"] == p_id:
+                    unit_info = unit
+                    break
+
+        assert unit_info is not None
+
+        unit_keys_int = [
+                "id",
+                "players_id",
+                "fuel",
+                "fuel_per_turn",
+                "ammo",
+                "cost",
+                "x",
+                "y",
+                "hit_points"
+        ]
+        prefix = "units_"
+        unit_keys_str = ["name", "symbol", "movement_type"]
+        for k in unit_keys_int:
+            built_unit[k] = int(unit_info[prefix + k])
+        for k in unit_keys_str:
+            built_unit[k] = unit_info[prefix + k]
+        new_unit_info[built_unit["id"]] = Unit(**built_unit)
 
         # Player info
         # - funds change
@@ -477,7 +534,8 @@ class AWBWGameState(game.GameState):
             if isinstance(value, int):
                 new_player_info[p_id]["funds"] = value
                 break
-        new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
+        new_player_info[p_id]["co_power_on"] = False
+        new_player_info[p_id]["super_co_power_on"] = False
 
         # Unit info
         # - TODO resupply
@@ -485,14 +543,15 @@ class AWBWGameState(game.GameState):
         # - sank / crashed units
         new_unit_info = deepcopy(self.units)
         repaired_info = info["repaired"]
-        for value in repaired_info.values():
-            assert isinstance(value, list)
-            for unit in value:
-                u_id = int(unit["units_id"])
-                if u_id not in new_unit_info:
-                    logging.warning("Unknown unit id %d in repair info", u_id)
-                    continue
-                new_unit_info[u_id]["hit_points"] = unit["units_hit_points"]
+        if repaired_info and isinstance(repaired_info, dict):
+            for value in repaired_info.values():
+                assert isinstance(value, list)
+                for unit in value:
+                    u_id = int(unit["units_id"])
+                    if u_id not in new_unit_info:
+                        logging.warning("Unknown unit id %d in repair info", u_id)
+                        continue
+                    new_unit_info[u_id]["hit_points"] = unit["units_hit_points"]
         # Unmark moved, captured, fired flags
         for u_id, unit in new_unit_info.items():
             unit["moved"] = False
@@ -506,24 +565,136 @@ class AWBWGameState(game.GameState):
                 buildings=self.buildings,
                 game_info=new_global_info)
 
-    def _apply_power_action(self, action_data): # pylint: disable=unused-argument
+    def _apply_power_action_unit_add(self, action_data, new_unit_info):
+        """
+        Helper for power actions unitAdd actions.
+
+        Modifies new_unit_info in place. Also returns another reference to new_unit_info.
+        """
+        # pylint: disable=no-self-use
+        if "unitAdd" in action_data:
+            assert action_data["coName"] == "Sensei"
+            unit_add_info = None
+            if "global" in action_data["unitAdd"]:
+                unit_add_info = action_data["unitAdd"]["global"]
+            else:
+                for p_id, info in action_data["unitAdd"].items():
+                    if p_id == "global":
+                        continue
+                    p_id = int(p_id)
+                    if p_id == info["playerId"]:
+                        unit_add_info = info
+                        break
+            assert unit_add_info is not None
+
+            # TODO: Improve unit creation from incomplete data
+            name = unit_add_info["unitName"]
+            # Infantry cost for Sensei
+            cost = 1000
+            if name == "Mech":
+                cost = 3000
+            new_unit_template = {
+                "players_id": unit_add_info["playerId"],
+                "name": name,
+                "hit_points": 9, # Sensei's power creates the units all at 9hp...
+                "cost": cost,
+            }
+            for unit in unit_add_info["units"]:
+                u_id = unit["units_id"]
+                unit_info = {
+                    "id": u_id,
+                    "x": unit["units_x"],
+                    "y": unit["units_y"],
+                }
+                new_unit_info[u_id] = Unit(new_unit_template, **unit_info)
+
+        return new_unit_info
+
+    def _apply_power_action_hp_change(self, action_data, new_unit_info):
+        """
+        Helper for power actions hpChange actions.
+
+        Modifies new_unit_info in place. Also returns another reference to new_unit_info.
+        """
+        # pylint: disable=no-self-use
+        if "hpChange" in action_data:
+            for hp_type in ["hpGain", "hpLoss"]:
+                if (hp_type in action_data["hpChange"] and
+                    isinstance(action_data["hpChange"][hp_type], dict)):
+                    hp_gain_info = action_data["hpChange"][hp_type]
+                    hit_points = hp_gain_info["hp"]
+                    # TODO: Handle units_fuel
+                    for u_id, unit in new_unit_info.items():
+                        if unit["players_id"] in hp_gain_info:
+                            new_hp = new_unit_info[u_id]["hit_points"] + hit_points
+                            new_unit_info[u_id]["hit_points"] += max(1, min(10, new_hp))
+
+        return new_unit_info
+
+
+    def _apply_power_action_unit_replace(self, action_data, new_unit_info):
+        """
+        Helper for power actions unitReplace actions.
+
+        Modifies new_unit_info in place. Also returns another reference to new_unit_info.
+        """
+        # pylint: disable=no-self-use
+        if "unitReplace" in action_data:
+            unit_replay_info = action_data["unitReplace"]
+            # Iterate through all the values here. Since it's setting the new health
+            # it's fine if we modify the same unit multiple times due to it showing
+            # up in multiple views.
+            for units in unit_replay_info.values():
+                if not units or not units["units"]:
+                    continue
+                for unit in units["units"]:
+                    u_id = unit["units_id"]
+                    if "units_hit_points" in unit:
+                        hit_points = unit["units_hit_points"]
+                        new_unit_info[u_id]["hit_points"] = hit_points
+                    if "units_moved" in unit:
+                        new_unit_info[u_id]["moved"] = True
+
+        return new_unit_info
+
+
+    def _apply_power_action(self, action_data):
         """
         Helper for power actions
         """
-        print("Power action")
-        print("IMPLEMENT ME")
+        logging.debug("Power action")
+
         # Player info
         # - power status
         # - funds change
-        # - value change
         # - power meter change
+        p_id = action_data["playerID"]
+        co_meter = action_data["playersCOP"]
+        new_player_info = deepcopy(self.players)
+        new_player_info[p_id]["co_power"] = co_meter
+        new_player_info[p_id]["co_power_on"] = (action_data["coPower"] == "Y")
+        new_player_info[p_id]["super_co_power_on"] = (action_data["coPower"] == "S")
 
         # Unit info
         # - health change
         # - ammo change
         # - fuel change
         # - new unit(s)
-        return deepcopy(self)
+        new_unit_info = deepcopy(self.units)
+        # Sensei's powers add units...
+        new_unit_info = self._apply_power_action_unit_add(action_data, new_unit_info)
+        # Hawke, Drake, Olaf, Andy, etc... affect global health of units
+        new_unit_info = self._apply_power_action_hp_change(action_data, new_unit_info)
+        # Von Bolt, Rachel, Sturm, Kindle...
+        # And movement affecting abilities...
+        new_unit_info = self._apply_power_action_unit_replace(action_data, new_unit_info)
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=new_player_info,
+                units=new_unit_info,
+                buildings=self.buildings,
+                game_info=self.game_info)
 
     def _apply_capt_action(self, action_data):
         """
@@ -703,6 +874,72 @@ class AWBWGameState(game.GameState):
                 buildings=self.buildings,
                 game_info=self.game_info)
 
+    def _apply_delete_action(self, action_data):
+        """
+        Helper for delete actions
+        """
+        logging.debug("Delete action")
+
+        new_unit_info = deepcopy(self.units)
+        for u_id in action_data["Delete"]["unitId"].values():
+            if isinstance(u_id, int):
+                # Set the unit's hp to zero to treat it as deleted
+                new_unit_info[u_id]["hit_points"] = 0
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=self.players,
+                units=new_unit_info,
+                buildings=self.buildings,
+                game_info=self.game_info)
+
+    def _apply_hide_action(self, action_data):
+        """
+        Helper for hide actions
+        """
+        logging.debug("Hide action")
+
+        move_state = self
+        if "Move" in action_data:
+            move_state = self._apply_move_action(action_data["Move"])
+
+        hide_info = action_data["Hide"]
+        new_unit_info = deepcopy(move_state.units)
+        for u_id in hide_info["unit"].values():
+            if isinstance(u_id, int):
+                new_unit_info[u_id]["sub_dive"] = True
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
+    def _apply_unhide_action(self, action_data):
+        """
+        Helper for unhide actions
+        """
+        logging.debug("Unhide action")
+
+        move_state = self
+        if "Move" in action_data:
+            move_state = self._apply_move_action(action_data["Move"])
+
+        unhide_info = action_data["Unhide"]
+        new_unit_info = deepcopy(move_state.units)
+        for unit in unhide_info["unit"].values():
+            if isinstance(unit, dict) and "units_x" in unit and "units_y" in unit:
+                u_id = unit["units_id"]
+                new_unit_info[u_id]["sub_dive"] = False
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.FIRE : _apply_fire_action,
             AWBWGameAction.Type.JOIN : _apply_join_action,
@@ -716,6 +953,9 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.UNLOAD : _apply_unload_action,
             AWBWGameAction.Type.REPAIR : _apply_repair_action,
             AWBWGameAction.Type.SUPPLY : _apply_supply_action,
+            AWBWGameAction.Type.DELETE : _apply_delete_action,
+            AWBWGameAction.Type.HIDE : _apply_hide_action,
+            AWBWGameAction.Type.UNHIDE : _apply_unhide_action,
             }
 
     def apply_action(self, action):

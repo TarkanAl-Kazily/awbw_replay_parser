@@ -627,9 +627,6 @@ class AWBWGameState(game.GameState):
                 }
                 new_unit_info[u_id] = Unit(new_unit_template, **unit_info)
 
-        import pdb
-        pdb.set_trace()
-
         # Hawke, Drake, Olaf, Andy, etc...
         if "hpChange" in action_data:
             for hp_type in ["hpGain", "hpLoss"]:

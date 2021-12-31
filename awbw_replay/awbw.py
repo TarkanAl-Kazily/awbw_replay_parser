@@ -572,20 +572,68 @@ class AWBWGameState(game.GameState):
         """
         Helper for power actions
         """
-        print("Power action")
-        print("IMPLEMENT ME")
+        logging.debug("Power action")
+        logging.warning("Not all CO Powers are supported accurately...")
+
         # Player info
         # - power status
         # - funds change
-        # - value change
         # - power meter change
+        p_id = action_data["playerID"]
+        co_meter = action_data["playersCOP"]
+        new_player_info = deepcopy(self.players)
+        new_player_info[p_id]["co_power"] = co_meter
+        # TODO: Mark Super CO Power on as appropriate
+        new_player_info[p_id]["co_power_on"] = True
 
         # Unit info
         # - health change
         # - ammo change
         # - fuel change
         # - new unit(s)
-        return deepcopy(self)
+        new_unit_info = deepcopy(self.units)
+        if "unitAdd" in action_data:
+            assert action_data["coName"] == "Sensei"
+            unit_add_info = None
+            if "global" in action_data["unitAdd"]:
+                unit_add_info = action_data["unitAdd"]["global"]
+            else:
+                for p_id, info in action_data["unitAdd"].items():
+                    if p_id == "global":
+                        continue
+                    p_id = int(p_id)
+                    if p_id == info["playerId"]:
+                        unit_add_info = info
+                        break
+            assert unit_add_info is not None
+
+            # TODO: Improve unit creation from incomplete data
+            name = unit_add_info["unitName"]
+            # Infantry cost for Sensei
+            cost = 1000
+            if name == "Mech":
+                cost = 3000
+            new_unit_template = {
+                "players_id": unit_add_info["playerId"],
+                "name": name,
+                "hit_points": 9, # Sensei's power creates the units all at 9hp...
+                "cost": cost,
+            }
+            for unit in unit_add_info["units"]:
+                u_id = unit["units_id"]
+                unit_info = {
+                    "id": u_id,
+                    "x": unit["units_x"],
+                    "y": unit["units_y"],
+                }
+                new_unit_info[u_id] = Unit(new_unit_template, **unit_info)
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=new_player_info,
+                units=new_unit_info,
+                buildings=self.buildings,
+                game_info=self.game_info)
 
     def _apply_capt_action(self, action_data):
         """

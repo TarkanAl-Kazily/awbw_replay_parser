@@ -450,25 +450,44 @@ class AWBWGameState(game.GameState):
         # - new unit
         built_unit = {}
         new_unit_info = deepcopy(self.units)
-        for unit in info.values():
-            unit_keys_int = [
-                    "id",
-                    "players_id",
-                    "fuel",
-                    "fuel_per_turn",
-                    "ammo",
-                    "cost",
-                    "x",
-                    "y",
-                    "hit_points"
-            ]
-            prefix = "units_"
-            unit_keys_str = ["name", "symbol", "movement_type"]
-            for k in unit_keys_int:
-                built_unit[k] = int(unit[prefix + k])
-            for k in unit_keys_str:
-                built_unit[k] = unit[prefix + k]
-            new_unit_info[built_unit["id"]] = Unit(**built_unit)
+        unit_info = None
+
+        # Figure out what information is the true info for the unit
+        if "global" in info and len(info) == 1:
+            # This is a normal standard match, where the unit is not Sonja's
+            unit_info = info["global"]
+        else:
+            # This unit has special vision information (FOG or Sonja's unit)
+            for p_id, unit in info.items():
+                if p_id == "global":
+                    continue
+                p_id = int(p_id)
+                # Only pick the unit that has full information
+                # (since a player always has full view of their units)
+                if unit["units_players_id"] == p_id:
+                    unit_info = unit
+                    break
+
+        assert unit_info is not None
+
+        unit_keys_int = [
+                "id",
+                "players_id",
+                "fuel",
+                "fuel_per_turn",
+                "ammo",
+                "cost",
+                "x",
+                "y",
+                "hit_points"
+        ]
+        prefix = "units_"
+        unit_keys_str = ["name", "symbol", "movement_type"]
+        for k in unit_keys_int:
+            built_unit[k] = int(unit_info[prefix + k])
+        for k in unit_keys_str:
+            built_unit[k] = unit_info[prefix + k]
+        new_unit_info[built_unit["id"]] = Unit(**built_unit)
 
         # Player info
         # - funds change

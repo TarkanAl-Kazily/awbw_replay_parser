@@ -181,8 +181,6 @@ class AWBWGameState(game.GameState):
         if is_team:
             logging.warning("Team battles not supported")
 
-        first_player = replay_initial_players[0]
-
     def _construct_initial_units(self, replay_initial_units):
         """Helper for just the unit info"""
         self.units = {}
@@ -567,29 +565,13 @@ class AWBWGameState(game.GameState):
                 buildings=self.buildings,
                 game_info=new_global_info)
 
-    def _apply_power_action(self, action_data): # pylint: disable=unused-argument
+    def _apply_power_action_unit_add(self, action_data, new_unit_info):
         """
-        Helper for power actions
+        Helper for power actions unitAdd actions.
+
+        Modifies new_unit_info in place. Also returns another reference to new_unit_info.
         """
-        logging.debug("Power action")
-
-        # Player info
-        # - power status
-        # - funds change
-        # - power meter change
-        p_id = action_data["playerID"]
-        co_meter = action_data["playersCOP"]
-        new_player_info = deepcopy(self.players)
-        new_player_info[p_id]["co_power"] = co_meter
-        new_player_info[p_id]["co_power_on"] = (action_data["coPower"] == "Y")
-        new_player_info[p_id]["super_co_power_on"] = (action_data["coPower"] == "S")
-
-        # Unit info
-        # - health change
-        # - ammo change
-        # - fuel change
-        # - new unit(s)
-        new_unit_info = deepcopy(self.units)
+        # pylint: disable=no-self-use
         if "unitAdd" in action_data:
             assert action_data["coName"] == "Sensei"
             unit_add_info = None
@@ -626,21 +608,37 @@ class AWBWGameState(game.GameState):
                 }
                 new_unit_info[u_id] = Unit(new_unit_template, **unit_info)
 
-        # Hawke, Drake, Olaf, Andy, etc...
+        return new_unit_info
+
+    def _apply_power_action_hp_change(self, action_data, new_unit_info):
+        """
+        Helper for power actions hpChange actions.
+
+        Modifies new_unit_info in place. Also returns another reference to new_unit_info.
+        """
+        # pylint: disable=no-self-use
         if "hpChange" in action_data:
             for hp_type in ["hpGain", "hpLoss"]:
                 if (hp_type in action_data["hpChange"] and
                     isinstance(action_data["hpChange"][hp_type], dict)):
                     hp_gain_info = action_data["hpChange"][hp_type]
-                    hp = hp_gain_info["hp"]
+                    hit_points = hp_gain_info["hp"]
                     # TODO: Handle units_fuel
                     for u_id, unit in new_unit_info.items():
                         if unit["players_id"] in hp_gain_info:
-                            new_hp = new_unit_info[u_id]["hit_points"] + hp
+                            new_hp = new_unit_info[u_id]["hit_points"] + hit_points
                             new_unit_info[u_id]["hit_points"] += max(1, min(10, new_hp))
 
-        # Von Bolt, Rachel, Sturm, Kindle...
-        # And movement affecting abilities...
+        return new_unit_info
+
+
+    def _apply_power_action_unit_replace(self, action_data, new_unit_info):
+        """
+        Helper for power actions unitReplace actions.
+
+        Modifies new_unit_info in place. Also returns another reference to new_unit_info.
+        """
+        # pylint: disable=no-self-use
         if "unitReplace" in action_data:
             unit_replay_info = action_data["unitReplace"]
             # Iterate through all the values here. Since it's setting the new health
@@ -652,10 +650,44 @@ class AWBWGameState(game.GameState):
                 for unit in units["units"]:
                     u_id = unit["units_id"]
                     if "units_hit_points" in unit:
-                        hp = unit["units_hit_points"]
-                        new_unit_info[u_id]["hit_points"] = hp
+                        hit_points = unit["units_hit_points"]
+                        new_unit_info[u_id]["hit_points"] = hit_points
                     if "units_moved" in unit:
                         new_unit_info[u_id]["moved"] = True
+
+        return new_unit_info
+
+
+    def _apply_power_action(self, action_data):
+        """
+        Helper for power actions
+        """
+        logging.debug("Power action")
+
+        # Player info
+        # - power status
+        # - funds change
+        # - power meter change
+        p_id = action_data["playerID"]
+        co_meter = action_data["playersCOP"]
+        new_player_info = deepcopy(self.players)
+        new_player_info[p_id]["co_power"] = co_meter
+        new_player_info[p_id]["co_power_on"] = (action_data["coPower"] == "Y")
+        new_player_info[p_id]["super_co_power_on"] = (action_data["coPower"] == "S")
+
+        # Unit info
+        # - health change
+        # - ammo change
+        # - fuel change
+        # - new unit(s)
+        new_unit_info = deepcopy(self.units)
+        # Sensei's powers add units...
+        new_unit_info = self._apply_power_action_unit_add(action_data, new_unit_info)
+        # Hawke, Drake, Olaf, Andy, etc... affect global health of units
+        new_unit_info = self._apply_power_action_hp_change(action_data, new_unit_info)
+        # Von Bolt, Rachel, Sturm, Kindle...
+        # And movement affecting abilities...
+        new_unit_info = self._apply_power_action_unit_replace(action_data, new_unit_info)
 
         return AWBWGameState(
                 game_map=self.game_map,

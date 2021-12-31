@@ -572,7 +572,6 @@ class AWBWGameState(game.GameState):
         Helper for power actions
         """
         logging.debug("Power action")
-        logging.warning("Not all CO Powers are supported accurately...")
 
         # Player info
         # - power status
@@ -641,6 +640,7 @@ class AWBWGameState(game.GameState):
                             new_unit_info[u_id]["hit_points"] += max(1, min(10, new_hp))
 
         # Von Bolt, Rachel, Sturm, Kindle...
+        # And movement affecting abilities...
         if "unitReplace" in action_data:
             unit_replay_info = action_data["unitReplace"]
             # Iterate through all the values here. Since it's setting the new health
@@ -651,8 +651,9 @@ class AWBWGameState(game.GameState):
                     continue
                 for unit in units["units"]:
                     u_id = unit["units_id"]
-                    hp = unit["units_hit_points"]
-                    new_unit_info[u_id]["hit_points"] = hp
+                    if "units_hit_points" in unit:
+                        hp = unit["units_hit_points"]
+                        new_unit_info[u_id]["hit_points"] = hp
                     if "units_moved" in unit:
                         new_unit_info[u_id]["moved"] = True
 

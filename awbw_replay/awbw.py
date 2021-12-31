@@ -293,8 +293,8 @@ class AWBWGameState(game.GameState):
                     if funds is not None:
                         gained_funds[p_id] = funds
 
-        for p_id in gained_funds:
-            new_player_info[p_id]["funds"] += gained_funds[p_id]
+        for p_id, funds in gained_funds.items():
+            new_player_info[p_id]["funds"] += funds
 
         return AWBWGameState(
                 game_map=self.game_map,

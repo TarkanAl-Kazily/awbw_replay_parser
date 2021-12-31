@@ -15,6 +15,7 @@ class GameInfo(game.DefaultDict):
         "maps_id": 0,
         "turn": 0,
         "day": 0,
+        "game_over": False,
     }
 
 class Player(game.DefaultDict):
@@ -341,13 +342,28 @@ class AWBWGameState(game.GameState):
                 buildings=move_state.buildings,
                 game_info=move_state.game_info)
 
-    def _apply_resign_action(self, action_data): # pylint: disable=unused-argument
+    def _apply_resign_action(self, action_data):
         """
         Helper for resign actions
         """
-        print("Resign action")
-        print("IMPLEMENT ME")
-        return deepcopy(self)
+        logging.debug("Resign action")
+        new_game_info = self.game_info
+        if "GameOver" in action_data:
+            new_game_info = deepcopy(self.game_info)
+            new_game_info["game_over"] = True
+
+        new_player_info = deepcopy(self.players)
+        p_id = action_data["Resign"]["playerId"]
+        new_player_info[p_id]["eliminated"] = True
+
+        # TODO: The GameOver / Resign messages actual contain usernames.
+
+        return AWBWGameState(
+                game_map=self.game_map,
+                players=new_player_info,
+                units=self.units,
+                buildings=self.buildings,
+                game_info=new_game_info)
 
     def _apply_move_action(self, action_data):
         """

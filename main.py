@@ -51,10 +51,6 @@ def test_replay(replay, show_plot=True):
     """Parses a replay to generate plots of data"""
     states = [AWBWGameState(replay_initial=replay.game_info())]
 
-    players = {}
-    for i, p_id in enumerate(states[-1].players.keys()):
-        players[p_id] = {"name": PLAYER_NAMES[i], "funds": []}
-
     # Generate all the states
     for action in replay.actions():
         action = AWBWGameAction(replay_action=action)
@@ -65,6 +61,10 @@ def test_replay(replay, show_plot=True):
         ]
         logging.debug(" ".join(message))
         states.append(states[-1].apply_action(action))
+
+    players = {}
+    for p_id, player in states[-1].players.items():
+        players[p_id] = {"name": "Loser" if player["eliminated"] else "Winner", "funds": []}
 
     # For each state, get the day. If it's the last state of the day, track both player's stats
     day = 1

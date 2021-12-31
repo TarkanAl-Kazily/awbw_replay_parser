@@ -519,14 +519,15 @@ class AWBWGameState(game.GameState):
         # - sank / crashed units
         new_unit_info = deepcopy(self.units)
         repaired_info = info["repaired"]
-        for value in repaired_info.values():
-            assert isinstance(value, list)
-            for unit in value:
-                u_id = int(unit["units_id"])
-                if u_id not in new_unit_info:
-                    logging.warning("Unknown unit id %d in repair info", u_id)
-                    continue
-                new_unit_info[u_id]["hit_points"] = unit["units_hit_points"]
+        if repaired_info and isinstance(repaired_info, dict):
+            for value in repaired_info.values():
+                assert isinstance(value, list)
+                for unit in value:
+                    u_id = int(unit["units_id"])
+                    if u_id not in new_unit_info:
+                        logging.warning("Unknown unit id %d in repair info", u_id)
+                        continue
+                    new_unit_info[u_id]["hit_points"] = unit["units_hit_points"]
         # Unmark moved, captured, fired flags
         for u_id, unit in new_unit_info.items():
             unit["moved"] = False

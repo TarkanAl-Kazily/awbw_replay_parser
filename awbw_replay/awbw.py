@@ -31,9 +31,9 @@ class Player(game.DefaultDict):
         "co_max_spower": 0,
         "co_power": 0,
         "co_power_on": False,
+        "super_co_power_on": False,
         "eliminated": False,
         "funds": 0,
-        "turn_count": 0,
     }
 
 class Unit(game.DefaultDict):
@@ -155,7 +155,6 @@ class AWBWGameState(game.GameState):
         is_team = False
         for player in replay_initial_players.values():
             player_info = {
-                "turn_count": 0
             }
             player_keys_int = [
                     "id",
@@ -183,7 +182,6 @@ class AWBWGameState(game.GameState):
             logging.warning("Team battles not supported")
 
         first_player = replay_initial_players[0]
-        self.players[int(first_player["id"])]["turn_count"] = 1
 
     def _construct_initial_units(self, replay_initial_units):
         """Helper for just the unit info"""
@@ -538,7 +536,8 @@ class AWBWGameState(game.GameState):
             if isinstance(value, int):
                 new_player_info[p_id]["funds"] = value
                 break
-        new_player_info[new_global_info["active_player_id"]]["turn_count"] += 1
+        new_player_info[p_id]["co_power_on"] = False
+        new_player_info[p_id]["super_co_power_on"] = False
 
         # Unit info
         # - TODO resupply
@@ -583,8 +582,8 @@ class AWBWGameState(game.GameState):
         co_meter = action_data["playersCOP"]
         new_player_info = deepcopy(self.players)
         new_player_info[p_id]["co_power"] = co_meter
-        # TODO: Mark Super CO Power on as appropriate
-        new_player_info[p_id]["co_power_on"] = True
+        new_player_info[p_id]["co_power_on"] = (action_data["coPower"] == "Y")
+        new_player_info[p_id]["super_co_power_on"] = (action_data["coPower"] == "S")
 
         # Unit info
         # - health change
@@ -627,6 +626,38 @@ class AWBWGameState(game.GameState):
                     "y": unit["units_y"],
                 }
                 new_unit_info[u_id] = Unit(new_unit_template, **unit_info)
+
+        import pdb
+        pdb.set_trace()
+
+        # Hawke, Drake, Olaf, Andy, etc...
+        if "hpChange" in action_data:
+            for hp_type in ["hpGain", "hpLoss"]:
+                if (hp_type in action_data["hpChange"] and
+                    isinstance(action_data["hpChange"][hp_type], dict)):
+                    hp_gain_info = action_data["hpChange"][hp_type]
+                    hp = hp_gain_info["hp"]
+                    # TODO: Handle units_fuel
+                    for u_id, unit in new_unit_info.items():
+                        if unit["players_id"] in hp_gain_info:
+                            new_hp = new_unit_info[u_id]["hit_points"] + hp
+                            new_unit_info[u_id]["hit_points"] += max(1, min(10, new_hp))
+
+        # Von Bolt, Rachel, Sturm, Kindle...
+        if "unitReplace" in action_data:
+            unit_replay_info = action_data["unitReplace"]
+            # Iterate through all the values here. Since it's setting the new health
+            # it's fine if we modify the same unit multiple times due to it showing
+            # up in multiple views.
+            for units in unit_replay_info.values():
+                if not units or not units["units"]:
+                    continue
+                for unit in units["units"]:
+                    u_id = unit["units_id"]
+                    hp = unit["units_hit_points"]
+                    new_unit_info[u_id]["hit_points"] = hp
+                    if "units_moved" in unit:
+                        new_unit_info[u_id]["moved"] = True
 
         return AWBWGameState(
                 game_map=self.game_map,

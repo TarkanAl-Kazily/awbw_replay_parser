@@ -106,6 +106,8 @@ class AWBWGameAction(game.GameAction):
         REPAIR = "Repair"
         SUPPLY = "Supply"
         DELETE = "Delete"
+        HIDE = "Hide"
+        UNHIDE = "Unhide"
 
     def __init__(self, replay_action):
         super().__init__()
@@ -739,6 +741,53 @@ class AWBWGameState(game.GameState):
                 buildings=self.buildings,
                 game_info=self.game_info)
 
+    def _apply_hide_action(self, action_data):
+        """
+        Helper for hide actions
+        """
+        logging.debug("Hide action")
+
+        move_state = self
+        if "Move" in action_data:
+            move_state = self._apply_move_action(action_data["Move"])
+
+        hide_info = action_data["Hide"]
+        new_unit_info = deepcopy(move_state.units)
+        for u_id in hide_info["unit"].values():
+            if isinstance(u_id, int):
+                new_unit_info[u_id]["sub_dive"] = True
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
+    def _apply_unhide_action(self, action_data):
+        """
+        Helper for unhide actions
+        """
+        logging.debug("Unhide action")
+
+        move_state = self
+        if "Move" in action_data:
+            move_state = self._apply_move_action(action_data["Move"])
+
+        unhide_info = action_data["Unhide"]
+        new_unit_info = deepcopy(move_state.units)
+        for unit in unhide_info["unit"].values():
+            if isinstance(unit, dict) and "units_x" in unit and "units_y" in unit:
+                u_id = unit["units_id"]
+                new_unit_info[u_id]["sub_dive"] = False
+
+        return AWBWGameState(
+                game_map=move_state.game_map,
+                players=move_state.players,
+                units=new_unit_info,
+                buildings=move_state.buildings,
+                game_info=move_state.game_info)
+
     _ACTION_TYPE_TO_APPLY_FUNC = {
             AWBWGameAction.Type.FIRE : _apply_fire_action,
             AWBWGameAction.Type.JOIN : _apply_join_action,
@@ -753,6 +802,8 @@ class AWBWGameState(game.GameState):
             AWBWGameAction.Type.REPAIR : _apply_repair_action,
             AWBWGameAction.Type.SUPPLY : _apply_supply_action,
             AWBWGameAction.Type.DELETE : _apply_delete_action,
+            AWBWGameAction.Type.HIDE : _apply_hide_action,
+            AWBWGameAction.Type.UNHIDE : _apply_unhide_action,
             }
 
     def apply_action(self, action):

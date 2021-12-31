@@ -23,7 +23,7 @@ class Player(game.DefaultDict):
 
     ALLOWED_DATA = {
         "id": 0,
-        "team": 0,
+        "team": "",
         "users_id": 0,
         "countries_id": 0,
         "co_id": 0,
@@ -80,8 +80,9 @@ class Building(game.DefaultDict):
         "terrain_id": 0,
         "x": 0,
         "y": 0,
-        # Same as player id
-        "team": 0,
+        "players_id": 0,
+        # Only used in team battles
+        "team": "",
     }
 
 # Derived classes for AWBW
@@ -151,6 +152,7 @@ class AWBWGameState(game.GameState):
     def _construct_initial_players(self, replay_initial_players):
         """Helper for just the players info"""
         self.players = {}
+        is_team = False
         for player in replay_initial_players.values():
             player_info = {
                 "turn_count": 0
@@ -164,7 +166,6 @@ class AWBWGameState(game.GameState):
                     "co_max_power",
                     "co_max_spower",
                     "co_power",
-                    "team"
             ]
             for k in player_keys_int:
                 player_info[k] = int(player[k])
@@ -172,8 +173,15 @@ class AWBWGameState(game.GameState):
             player_keys_bool = ["co_power_on", "eliminated"]
             for k in player_keys_bool:
                 player_info[k] = (player[k] == "Y")
-
+            player_info["team"] = player["team"]
+            if "A" in player_info["team"] or "B" in player_info["team"]:
+                is_team = True
             self.players[player_info["id"]] = Player(**player_info)
+
+        # TODO: Support team battles
+        if is_team:
+            logging.warning("Team battles not supported")
+
         first_player = replay_initial_players[0]
         self.players[int(first_player["id"])]["turn_count"] = 1
 

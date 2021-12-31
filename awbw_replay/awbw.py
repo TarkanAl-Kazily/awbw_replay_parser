@@ -259,6 +259,9 @@ class AWBWGameState(game.GameState):
             # by a magnitude of 10.
             new_player_info[p_id]["co_power"] = int(values["copValue"]) / 10
 
+        # Handle funds change in the case of Sasha's power
+        gained_funds = {}
+
         # Unit info
         # - ammo change
         # - health change
@@ -266,21 +269,33 @@ class AWBWGameState(game.GameState):
         for combatinfo in fire_action["combatInfoVision"].values():
             if not isinstance(combatinfo, dict) or not isinstance(combatinfo["combatInfo"], dict):
                 continue
-            for role, unit in combatinfo["combatInfo"].items():
-                if not isinstance(unit, dict):
-                    # Indicates a unseen attacker
-                    continue
-                u_id = int(unit["units_id"])
-                assert u_id in new_unit_info
-                updated_unit_data = {
-                    "hit_points": unit["units_hit_points"],
-                    "ammo": unit["units_ammo"],
-                    "fired": role == "attacker",
-                }
-                new_unit_info[u_id] = {
-                    **new_unit_info[u_id],
-                    **updated_unit_data,
-                }
+            for role in ["attacker", "defender"]:
+                if role in combatinfo["combatInfo"]:
+                    unit = combatinfo["combatInfo"][role]
+                    if not isinstance(unit, dict):
+                        # Indicates a unseen attacker
+                        continue
+                    u_id = int(unit["units_id"])
+                    assert u_id in new_unit_info
+                    updated_unit_data = {
+                        "hit_points": unit["units_hit_points"],
+                        "ammo": unit["units_ammo"],
+                        "fired": role == "attacker",
+                    }
+                    new_unit_info[u_id] = {
+                        **new_unit_info[u_id],
+                        **updated_unit_data,
+                    }
+            if "gainedFunds" in combatinfo["combatInfo"]:
+                fundsinfo = combatinfo["combatInfo"]["gainedFunds"]
+                for p_id, funds in fundsinfo.items():
+                    p_id = int(p_id)
+                    if funds is not None:
+                        gained_funds[p_id] = funds
+
+        for p_id in gained_funds:
+            new_player_info[p_id]["funds"] += gained_funds[p_id]
+
         return AWBWGameState(
                 game_map=self.game_map,
                 players=new_player_info,
